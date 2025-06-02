@@ -1,56 +1,36 @@
 # 🎯 Comprehensive Multi-Dimensional Duplicate Detection System
 
-## 🚀 **Your Brilliant Suggestion Implemented!**
+## Overview
+Loopin City uses a robust, multi-factor scoring system to detect and prevent duplicate tech communities. This system ensures that similar or rebranded communities are recognized and managed appropriately, maintaining the integrity of our platform.
 
-Based on your feedback, we've built a **robust, multi-factor scoring system** that analyzes **5 different dimensions** to determine community similarity.
+## The 5-Dimensional Scoring System
 
-## 📊 **The 5-Dimensional Scoring System**
+1. **Name Matching (40% weight)**
+   - Considers exact matches, common abbreviations (e.g., "GDG" ↔ "Google Developer Group"), and fuzzy similarity.
+2. **Location Matching (25% weight)**
+   - Prioritizes communities in the same city.
+3. **Website Matching (20% weight)**
+   - Checks for identical or similar community websites.
+4. **Contact Matching (10% weight)**
+   - Compares organizer emails and phone numbers for overlap.
+5. **Social Media Matching (5% weight)**
+   - Looks for shared or similar social media links.
 
-### **1. Name Matching (40% weight)**
-- **Exact Match**: 100 points
-- **Smart Abbreviations**: 
-  - "GDG" ↔ "Google Developer Group" → 95 points
-  - "JS" ↔ "JavaScript" → 90 points  
-  - "AI" ↔ "Artificial Intelligence" → 90 points
-  - "ML" ↔ "Machine Learning" → 90 points
-  - "UX" ↔ "User Experience" → 90 points
-- **Fuzzy Similarity**: 60-90 points based on text similarity
-- **Word Overlap**: 50 points if 2+ significant words match
+## How It Works
+- Each dimension is scored individually and combined using the weights above to produce a final similarity score.
+- **Decision Thresholds:**
+  - **90–100%:** Automatically reuses the existing community (very high confidence).
+  - **70–89%:** Flags for admin review (medium confidence).
+  - **0–69%:** Creates a new community (low confidence).
 
-### **2. Location Matching (25% weight)**
-- **Same City**: 100 points
-- **Different City**: 20 points (low but not zero for data errors)
+## Benefits
+- Prevents duplicate or fragmented communities.
+- Handles common naming variations and rebrands.
+- Ensures accurate community leaderboards and event attribution.
+- Scalable and extensible for future improvements.
 
-### **3. Website Matching (20% weight)** 
-- **Exact URL Match**: 100 points
-- **Same Domain**: 75 points (e.g., mumbai.techcommunity.org vs delhi.techcommunity.org)
-- **Different URLs**: 0 points (strong signal of different orgs)
-- **Missing Data**: 50 points (neutral)
-
-### **4. Contact Matching (10% weight)**
-- **Same Email**: 100 points
-- **Same Email Domain**: 80 points (e.g., @company.com)
-- **Same Phone**: 100 points (last 10 digits)
-- **No Match**: 0 points
-
-### **5. Social Media Matching (5% weight)**
-- **Any Overlapping Social Links**: 100 points
-- **No Overlap**: 0 points
-- **Missing Data**: 50 points (neutral)
-
-## 🎯 **Final Score Calculation**
-
-```
-Final Score = (Name × 40%) + (Location × 25%) + (Website × 20%) + (Contact × 10%) + (Social × 5%)
-```
-
-## 🚦 **Decision Thresholds**
-
-| Score Range | Action | Rationale |
-|-------------|---------|-----------|
-| **90-100%** | ✅ **Auto-Reuse** | Very high confidence - same organization |
-| **70-89%** | ⚠️ **Admin Review** | Medium confidence - needs human verification |
-| **0-69%** | 🆕 **Create New** | Low confidence - likely different organizations |
+---
+*For security, implementation details and backend logic are not included in this document.*
 
 ## 📋 **Real-World Examples**
 
@@ -132,38 +112,6 @@ Scores:
 
 Final: (90×40% + 100×25% + 0×20% + 80×10% + 50×5%) = 76.5%
 Result: ⚠️ ADMIN REVIEW
-```
-
-## 🛠️ **Implementation Details**
-
-### **Database Function**
-```sql
--- Call the comprehensive function
-SELECT * FROM find_similar_communities_comprehensive(
-  'GDG Mumbai',                    -- community_name
-  'city-uuid-here',               -- city_id  
-  'https://gdgmumbai.com',        -- website_url
-  'organizer@gmail.com',          -- organizer_email
-  '+91-9876543210',              -- organizer_phone
-  ARRAY['https://twitter.com/gdgmumbai', 'https://linkedin.com/company/gdgmumbai'] -- social_links
-);
-```
-
-### **Score Breakdown Response**
-```json
-{
-  "id": "community-uuid",
-  "name": "GDG Mumbai", 
-  "similarity_score": 95,
-  "score_breakdown": {
-    "name_score": 95,
-    "location_score": 100,
-    "website_score": 100, 
-    "contact_score": 80,
-    "social_score": 50,
-    "total_weighted": 95.5
-  }
-}
 ```
 
 ## 🎉 **Benefits of This Approach**
