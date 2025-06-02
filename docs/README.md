@@ -1,6 +1,6 @@
 <!-- Brand Logo -->
 <p align="center">
-  <img src="../public/loopin-logo.svg" alt="Loopin City Logo" width="180" />
+  <img src="../public/loopin-favicon.svg" alt="Loopin City Logo" width="180" />
 </p>
 
 # Loopin City
