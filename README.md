@@ -3,7 +3,7 @@
 <div align="center">
   <img src="/public/loopin-favicon.svg" alt="Loopin City Favicon" width="180"/>
   <br/>
-  <p><strong>India's most community-driven tech events platform</strong></p>
+  <p><strong>India's first community-driven tech events platform</strong></p>
   <p><em>Discover. Connect. Loop in.</em></p>
 </div>
 
