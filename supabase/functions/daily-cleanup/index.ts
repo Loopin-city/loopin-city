@@ -1,5 +1,5 @@
-import { serve } from 'https:
-import { createClient } from 'https:
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!
@@ -46,12 +46,12 @@ async function cleanupExpiredEvents() {
       const eventDidStart = eventStartDate <= currentTime
       
       
-      eventEndDate.setHours(eventEndDate.getHours() + 24)
+      eventEndDate.setDate(eventEndDate.getDate() + 7)
       
       
-      const is24HoursAfterEnd = eventEndDate < currentTime
+      const isOneWeekAfterEnd = eventEndDate < currentTime
       
-      return eventDidStart && is24HoursAfterEnd
+      return eventDidStart && isOneWeekAfterEnd
     })
 
     if (successfulExpiredEvents.length === 0) {
