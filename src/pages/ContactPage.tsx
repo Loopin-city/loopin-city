@@ -8,7 +8,7 @@ const ContactPage: React.FC = () => (
         <h1 className="text-3xl font-bold text-accent-black mb-6 font-mono border-b border-accent-black/10 pb-4">Contact Us</h1>
         <p className="text-accent-black font-mono mb-4">
           Have questions, suggestions, or want to partner with us?<br />
-          Email: <a href="mailto:contact@loopin.com" className="underline">contact@loopin.com</a><br />
+          Email: <a href="mailto:support@loopin.city" className="underline">support@loopin.city</a><br />
           We love hearing from the community!
         </p>
       </div>

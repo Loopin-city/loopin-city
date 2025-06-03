@@ -4,7 +4,7 @@ import { ExternalLink, Github, Heart, Code, Users, Target } from 'lucide-react';
 
 const OpenSourcePage: React.FC = () => {
   const handleGitHubRedirect = () => {
-    window.open('https://github.com/loopin/loopin', '_blank');
+    window.open('https://github.com/Loopin-city/loopin-city', '_blank');
   };
 
   return (
