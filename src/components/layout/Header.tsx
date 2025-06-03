@@ -18,7 +18,7 @@ const Header: React.FC = () => {
   
   return (
     <header className="bg-primary text-accent-black sticky top-0 z-50 shadow-sm">
-      <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
+      <div className="px-2 sm:px-4 lg:px-6">
         <div className="flex justify-between h-12 sm:h-14 items-center">
           <div className="flex items-center">
             <Link to="/" className="flex-shrink-0 flex items-center group">
