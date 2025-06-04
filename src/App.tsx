@@ -17,6 +17,7 @@ import TermsPage from './pages/TermsPage';
 import ContactPage from './pages/ContactPage';
 import SubscribeAlertsPage from './pages/SubscribeAlertsPage';
 import AdminDebugPage from './pages/AdminDebugPage';
+import NotFoundPage from './pages/NotFoundPage';
 
 function App() {
   return (
@@ -35,6 +36,7 @@ function App() {
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/alerts" element={<SubscribeAlertsPage />} />
           <Route path="/admin-debug" element={<AdminDebugPage />} />
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
         <LocationModal />
       </div>
