@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import EventCard from './EventCard';
 import type { Event } from '../../types';
 import { CalendarX, Sparkles, Search, Grid3X3, List, Calendar, MapPin, Users, Clock } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 interface EventListProps {
   events: Event[];
@@ -109,13 +110,13 @@ const EventList: React.FC<EventListProps> = ({ events, loading = false }) => {
               <Search className="h-4 w-4" />
               Try Again
             </button>
-            <a 
-              href="/submit-event"
+            <Link 
+              to="/submit-event"
               className="px-6 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
             >
               <Sparkles className="h-4 w-4" />
               Submit Event
-            </a>
+            </Link>
           </div>
         </div>
       </div>
