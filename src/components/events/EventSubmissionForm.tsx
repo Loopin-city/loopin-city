@@ -298,13 +298,15 @@ const EventSubmissionForm: React.FC = () => {
 
       
       let venueId = null;
+      let venueValue = formData.venue;
       if (!formData.isOnline && formData.venue) {
         try {
           venueId = await findOrCreateVenue(formData.venue, selectedCity.id);
         } catch (venueError) {
           console.warn('Error handling venue:', venueError);
-          
         }
+      } else if (formData.isOnline) {
+        venueValue = '';
       }
 
       
@@ -316,7 +318,7 @@ const EventSubmissionForm: React.FC = () => {
           banner_url: bannerUrl,  
           date: formData.date,
           end_date: formData.endDate || null,
-          venue: formData.venue,
+          venue: venueValue,
           venue_id: venueId, 
           is_online: formData.isOnline,
           event_type: formData.eventType,
