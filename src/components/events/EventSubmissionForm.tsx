@@ -118,7 +118,11 @@ const EventSubmissionForm: React.FC = () => {
   
   const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, checked } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: checked }));
+    setFormData((prev) => ({ 
+      ...prev, 
+      [name]: checked,
+      venue: checked ? 'Online event' : prev.venue 
+    }));
   };
   
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -739,21 +743,20 @@ const EventSubmissionForm: React.FC = () => {
             </div>
           </div>
           
-          {!formData.isOnline && (
-            <div>
-              <label htmlFor="venue" className="form-label">Venue*</label>
-              <input
-                type="text"
-                id="venue"
-                name="venue"
-                required={!formData.isOnline}
-                value={formData.venue}
-                onChange={handleChange}
-                className="form-input"
-                placeholder="e.g., Innovation Hub"
-              />
-            </div>
-          )}
+          <div>
+            <label htmlFor="venue" className="form-label">Venue*</label>
+            <input
+              type="text"
+              id="venue"
+              name="venue"
+              required
+              value={formData.venue}
+              onChange={handleChange}
+              className="form-input"
+              placeholder={formData.isOnline ? "Online event" : "e.g., Innovation Hub"}
+              disabled={formData.isOnline}
+            />
+          </div>
         </div>
       </div>
 
