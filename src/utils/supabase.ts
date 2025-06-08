@@ -143,9 +143,9 @@ export async function getEvents(filters?: FilterOptions) {
     .eq('status', 'approved')
     .order('date', { ascending: true });
 
-  if (filters?.date) {
-    query = query.gte('date', filters.date);
-  }
+  const now = new Date().toISOString();
+  query = query.or(`date.gte.${now},and(end_date.gte.${now},date.lte.${now})`);
+
   if (filters?.community) {
     query = query.eq('community_id', filters.community);
   }
