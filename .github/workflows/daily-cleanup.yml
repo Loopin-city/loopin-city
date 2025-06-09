@@ -1,0 +1,15 @@
+name: Daily Cleanup
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Every day at midnight UTC
+
+jobs:
+  trigger-edge-function:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call Supabase Edge Function
+        run: |
+          curl -X POST 'https://gjnwrltlfziythesuire.supabase.co/functions/v1/daily-cleanup' \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "Content-Type: application/json" 
