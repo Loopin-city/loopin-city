@@ -110,8 +110,7 @@ We love contributions from everyone! Here's how you can help:
 
 ## 🌈 Community
 
-- Follow us on [LinkedIn]([https://linkedin.com/company/loopin](https://www.linkedin.com/company/city-loopin/
-))
+- Follow us on [LinkedIn](https://www.linkedin.com/company/city-loopin/)
 - Email us at support@loopin.city
 
 ## 📄 License
