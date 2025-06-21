@@ -185,6 +185,12 @@ export async function getEventById(id: string) {
         id,
         name,
         state
+      ),
+      sponsors (
+        id,
+        name,
+        banner_url,
+        website_url
       )
     `)
     .eq('id', id)
@@ -200,6 +206,7 @@ export async function getEventById(id: string) {
     communityName: data.communities.name,
     communityLogo: data.communities.logo,
     cityName: data.cities.name,
+    sponsors: data.sponsors || [],
   };
 }
 

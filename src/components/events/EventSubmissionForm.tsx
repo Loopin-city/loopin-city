@@ -35,6 +35,11 @@ const EventSubmissionForm: React.FC = () => {
     communitySize: '',
     yearFounded: '',
     previousEvents: [] as string[],
+    sponsors: [] as Array<{
+      name: string;
+      banner: File | null;
+      website_url: string;
+    }>,
   });
   
   const eventTypes: EventType[] = ['Hackathon', 'Workshop', 'Meetup', 'Talk', 'Conference', 'Other'];
@@ -140,19 +145,24 @@ const EventSubmissionForm: React.FC = () => {
       
       const uploadFile = async (file: File, bucket: string, folder: string = '') => {
         const fileName = `${folder}${Date.now()}-${file.name}`;
+        console.log(`Uploading file: ${fileName} to bucket: ${bucket}`);
+        
         const { data, error } = await supabase.storage
           .from(bucket)
           .upload(fileName, file);
         
         if (error) {
+          console.error(`Upload error for ${fileName}:`, error);
           throw new Error(`Failed to upload file: ${error.message}`);
         }
         
+        console.log(`Upload successful for ${fileName}:`, data);
         
         const { data: urlData } = supabase.storage
           .from(bucket)
           .getPublicUrl(fileName);
         
+        console.log(`Public URL generated: ${urlData.publicUrl}`);
         return urlData.publicUrl;
       };
 
@@ -346,8 +356,35 @@ const EventSubmissionForm: React.FC = () => {
         throw new Error('Failed to submit event: No data returned');
       }
 
-      
-      
+      // Handle sponsor uploads and database insertion
+      if (formData.sponsors && formData.sponsors.length > 0) {
+        for (const sponsor of formData.sponsors) {
+          if (sponsor.name && sponsor.banner) {
+            try {
+              // Upload sponsor banner
+              const sponsorBannerUrl = await uploadFile(sponsor.banner, 'sponsor-banners', 'sponsors/');
+              
+              // Insert sponsor record
+              const { error: sponsorError } = await supabase
+                .from('sponsors')
+                .insert({
+                  event_id: event.id,
+                  name: sponsor.name,
+                  banner_url: sponsorBannerUrl,
+                  website_url: sponsor.website_url || null,
+                });
+
+              if (sponsorError) {
+                console.warn(`Failed to insert sponsor ${sponsor.name}:`, sponsorError);
+                // Don't throw error here to avoid failing the entire submission
+              }
+            } catch (sponsorUploadError) {
+              console.warn(`Failed to upload sponsor banner for ${sponsor.name}:`, sponsorUploadError);
+              // Don't throw error here to avoid failing the entire submission
+            }
+          }
+        }
+      }
 
       
       if (similarCommunities && similarCommunities.length > 0) {
@@ -471,6 +508,18 @@ const EventSubmissionForm: React.FC = () => {
             <div><span className="font-bold">Year Founded:</span> {formData.yearFounded}</div>
             <div><span className="font-bold">Previous Events:</span> {formData.previousEvents && formData.previousEvents.length > 0 ? formData.previousEvents.join(', ') : 'N/A'}</div>
             <div><span className="font-bold">Proof of Existence:</span> {formData.proofOfExistence ? formData.proofOfExistence.name : 'N/A'}</div>
+            <div><span className="font-bold">Sponsors:</span> {formData.sponsors && formData.sponsors.length > 0 ? `${formData.sponsors.length} sponsor(s) added` : 'No sponsors'}</div>
+            {formData.sponsors && formData.sponsors.length > 0 && (
+              <div className="ml-4 mt-2 space-y-2">
+                {formData.sponsors.map((sponsor, index) => (
+                  <div key={index} className="text-sm bg-gray-100 p-2 rounded">
+                    <div><span className="font-medium">Name:</span> {sponsor.name || 'Unnamed'}</div>
+                    <div><span className="font-medium">Website:</span> {sponsor.website_url || 'Not provided'}</div>
+                    <div><span className="font-medium">Banner:</span> {sponsor.banner ? sponsor.banner.name : 'Not uploaded'}</div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
         <div className="flex justify-between mt-8">
@@ -1043,6 +1092,152 @@ const EventSubmissionForm: React.FC = () => {
           <div className="mt-4 text-sm text-gray-600">
             <p>All submissions are subject to admin review. You may be contacted for additional verification.</p>
           </div>
+        </div>
+      </div>
+
+      {/* Sponsors Section */}
+      <div className="bg-gray-50 p-4 rounded-lg mb-6">
+        <h3 className="text-lg font-medium text-gray-900 mb-2 flex items-center gap-2">
+          <span className="text-2xl">🎯</span>
+          Event Sponsors
+          <span className="text-sm font-normal text-gray-500">(Optional)</span>
+        </h3>
+        <p className="text-sm text-gray-600 mb-4">
+          If your event has sponsors, you can showcase their banners and information here. This helps increase visibility for your sponsors and adds credibility to your event.
+        </p>
+        
+        <div className="space-y-4">
+          {formData.sponsors.map((sponsor, index) => (
+            <div key={index} className="bg-white p-4 rounded-lg border border-gray-200">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-medium text-gray-900">Sponsor {index + 1}</h4>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newSponsors = formData.sponsors.filter((_, i) => i !== index);
+                    setFormData(prev => ({ ...prev, sponsors: newSponsors }));
+                  }}
+                  className="text-red-600 hover:text-red-800 text-sm font-medium"
+                >
+                  Remove
+                </button>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="form-label">Sponsor Name*</label>
+                  <input
+                    type="text"
+                    value={sponsor.name}
+                    onChange={(e) => {
+                      const newSponsors = [...formData.sponsors];
+                      newSponsors[index].name = e.target.value;
+                      setFormData(prev => ({ ...prev, sponsors: newSponsors }));
+                    }}
+                    className="form-input"
+                    placeholder="e.g., TechCorp Solutions"
+                    required={formData.sponsors.length > 0}
+                  />
+                </div>
+                
+                <div>
+                  <label className="form-label">Sponsor Website</label>
+                  <input
+                    type="url"
+                    value={sponsor.website_url}
+                    onChange={(e) => {
+                      const newSponsors = [...formData.sponsors];
+                      newSponsors[index].website_url = e.target.value;
+                      setFormData(prev => ({ ...prev, sponsors: newSponsors }));
+                    }}
+                    className="form-input"
+                    placeholder="https://sponsor-website.com (optional)"
+                    pattern="https?://.+"
+                    title="Please enter a valid URL starting with http:// or https://"
+                  />
+                </div>
+              </div>
+              
+              <div className="mt-4">
+                <label className="form-label">Sponsor Banner*</label>
+                <div className="mb-3 p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-blue-600">ℹ️</span>
+                    <span className="text-sm font-medium text-blue-800">Banner Requirements</span>
+                  </div>
+                  <div className="text-sm text-blue-700 space-y-1">
+                    <p>• Same size as event banner (minimum 800×450 pixels)</p>
+                    <p>• 16:9 aspect ratio recommended</p>
+                    <p>• Maximum file size: 5MB</p>
+                    <p>• Formats: JPG, PNG, WebP</p>
+                  </div>
+                </div>
+                
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                  <label className="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg px-4 py-2 transition-colors flex-shrink-0">
+                    {sponsor.banner ? '🔄 Change Banner' : '📤 Upload Banner'}
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          // Validate file size
+                          if (file.size > 5 * 1024 * 1024) {
+                            setFormError('Sponsor banner must be less than 5MB in size.');
+                            return;
+                          }
+                          
+                          const newSponsors = [...formData.sponsors];
+                          newSponsors[index].banner = file;
+                          setFormData(prev => ({ ...prev, sponsors: newSponsors }));
+                          setFormError('');
+                        }
+                      }}
+                      className="hidden"
+                      required={formData.sponsors.length > 0}
+                    />
+                  </label>
+                  
+                  {sponsor.banner && (
+                    <div className="flex items-center gap-2 bg-green-50 px-3 py-2 rounded-lg">
+                      <span className="text-green-600">✅</span>
+                      <span className="text-gray-700 text-sm font-medium truncate max-w-xs">
+                        {sponsor.banner.name}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                
+                {sponsor.banner && (
+                  <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                    <p className="text-sm font-medium text-gray-800 mb-2">Preview:</p>
+                    <div className="max-w-xs">
+                      <img
+                        src={URL.createObjectURL(sponsor.banner)}
+                        alt={`${sponsor.name} banner preview`}
+                        className="w-full h-24 object-cover rounded-lg border border-gray-200"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+          
+          <button
+            type="button"
+            onClick={() => {
+              setFormData(prev => ({
+                ...prev,
+                sponsors: [...prev.sponsors, { name: '', banner: null, website_url: '' }]
+              }));
+            }}
+            className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 px-4 rounded-lg border-2 border-dashed border-gray-300 hover:border-gray-400 transition-colors flex items-center justify-center gap-2"
+          >
+            <span className="text-lg">➕</span>
+            Add Sponsor
+          </button>
         </div>
       </div>
       

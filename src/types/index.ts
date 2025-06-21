@@ -13,6 +13,13 @@ export type Community = {
   cityId: string;
 };
 
+export type Sponsor = {
+  id?: string;
+  name: string;
+  banner_url: string;
+  website_url?: string;
+};
+
 export type Event = {
   id: string;
   title: string;
@@ -32,10 +39,16 @@ export type Event = {
   registrationUrl: string;
   createdAt: string;
   cityId: string;
+  sponsors?: Sponsor[];
 };
 
 export type EventFormData = Omit<Event, 'id' | 'createdAt' | 'communityName'> & {
   id?: string;
+  sponsors?: Array<{
+    name: string;
+    banner: File | null;
+    website_url?: string;
+  }>;
 };
 
 export type FilterOptions = {

@@ -4,6 +4,7 @@ import Layout from '../components/layout/Layout';
 import { getEventById } from '../utils/supabase';
 import type { Event } from '../types';
 import { formatDateTime, formatDateRange, getEventTypeColor } from '../utils/formatters';
+import SponsorsCarousel from '../components/events/SponsorsCarousel';
 import { 
   Calendar, 
   MapPin, 
@@ -83,7 +84,6 @@ const EventDetailPage: React.FC = () => {
         
         const eventData = await getEventById(id);
         
-        
         const transformedEvent: Event = {
           id: eventData.id,
           title: eventData.title,
@@ -102,7 +102,8 @@ const EventDetailPage: React.FC = () => {
           organizerPhone: eventData.organizer_phone,
           registrationUrl: eventData.rsvp_url || '#',
           createdAt: eventData.created_at,
-          cityId: eventData.city_id
+          cityId: eventData.city_id,
+          sponsors: eventData.sponsors || []
         };
         
         setEvent(transformedEvent);
@@ -287,7 +288,7 @@ const EventDetailPage: React.FC = () => {
     <Layout>
       <div className="min-h-screen bg-gray-50">
         {/* Banner Section */}
-        <div className="relative h-96 overflow-hidden">
+        <div className="relative w-full aspect-video overflow-hidden">
           <img 
             src={event.imageUrl} 
             alt={event.title} 
@@ -408,6 +409,13 @@ const EventDetailPage: React.FC = () => {
                       {event.description}
                     </div>
                   </div>
+                  
+                  {/* Sponsors Section */}
+                  {event.sponsors && event.sponsors.length > 0 && (
+                    <div className="mb-8">
+                      <SponsorsCarousel sponsors={event.sponsors} />
+                    </div>
+                  )}
                 </div>
                 {/* Sidebar */}
                 <div className="space-y-6">
