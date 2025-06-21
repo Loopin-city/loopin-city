@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Layout from '../components/layout/Layout';
 import { useLocation } from '../contexts/LocationContext';
 import { getVenueLeaderboard } from '../utils/supabase';
-import { Trophy, MapPin, Calendar, Award, Building2 } from 'lucide-react';
+import { Trophy, MapPin, Calendar, Award } from 'lucide-react';
 
 const VenuePartnersPage: React.FC = () => {
   const { selectedCity } = useLocation();
@@ -121,21 +121,19 @@ const VenuePartnersPage: React.FC = () => {
                  position === 2 ? <Award className="w-6 h-6" /> :
                  position === 3 ? <Award className="w-5 h-5" /> : position}
               </div>
-              {/* Venue Logo/Icon */}
-              <div className="w-16 h-16 rounded-full overflow-hidden mr-4 flex-shrink-0 border-2 border-yellow-400 bg-gradient-to-br from-yellow-400 to-yellow-500 flex items-center justify-center">
-                <Building2 className="w-8 h-8 text-black" />
-              </div>
               {/* Venue Info */}
-              <div className="flex-1 min-w-0">
-                <h3 className="text-lg font-bold text-gray-900 truncate">
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-gray-900">
                   {venue.name}
                 </h3>
-                <div className="flex items-center gap-4 mt-1">
-                  <div className="flex items-center gap-1 text-sm text-gray-600">
-                    <MapPin className="w-4 h-4" />
-                    <span className="truncate">{venue.address}</span>
+                {venue.address && venue.address !== 'Address to be verified' && (
+                  <div className="flex items-center gap-4 mt-1">
+                    <div className="flex items-center gap-1 text-sm text-gray-600">
+                      <MapPin className="w-4 h-4" />
+                      <span className="truncate">{venue.address}</span>
+                    </div>
                   </div>
-                </div>
+                )}
                 <div className="flex items-center gap-1 text-sm text-gray-600 mt-1">
                   <Calendar className="w-4 h-4" />
                   <span>{venue.event_count} events hosted</span>
