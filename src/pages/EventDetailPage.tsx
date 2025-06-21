@@ -286,6 +286,13 @@ const EventDetailPage: React.FC = () => {
   
   return (
     <Layout>
+      <Link 
+        to="/" 
+        className="md:hidden fixed bottom-5 right-5 z-50 inline-flex items-center px-4 py-2 bg-black/60 backdrop-blur-lg text-white font-medium rounded-full shadow-lg hover:bg-black/80 transition-colors"
+      >
+        <ArrowLeft className="h-4 w-4 mr-2" />
+        <span>Back to Events</span>
+      </Link>
       <div className="min-h-screen bg-gray-50">
         {/* Banner Section */}
         <div className="relative w-full aspect-video overflow-hidden">
@@ -296,46 +303,13 @@ const EventDetailPage: React.FC = () => {
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
           {/* Top Controls */}
-          <div className="absolute inset-0 flex items-end">
-            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-8 w-full">
-              <div className="flex items-center justify-between">
-                <Link 
-                  to="/" 
-                  className="inline-flex items-center px-4 py-2 bg-white/10 backdrop-blur-sm text-white rounded-lg hover:bg-white/20 transition-colors mb-6"
-                >
-                  <ArrowLeft className="h-4 w-4 mr-2" /> Back to events
-                </Link>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setIsBookmarked(!isBookmarked)}
-                    className={`p-2 rounded-lg backdrop-blur-sm transition-colors ${
-                      isBookmarked 
-                        ? 'bg-yellow-400 text-black' 
-                        : 'bg-white/10 text-white hover:bg-white/20'
-                    }`}
-                  >
-                    <Bookmark className="h-5 w-5" />
-                  </button>
-                  <button
-                    onClick={handleShare}
-                    disabled={isSharing}
-                    className="p-2 bg-white/10 backdrop-blur-sm text-white rounded-lg hover:bg-white/20 transition-colors"
-                  >
-                    <Share2 className="h-5 w-5" />
-                  </button>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 mb-4">
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-yellow-400 text-black">
-                  {event.eventType}
-                </span>
-                {isUpcoming && (
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-green-500 text-white">
-                    <CheckCircle className="h-4 w-4 mr-1" />
-                    Upcoming
-                  </span>
-                )}
-              </div>
+          <div className="absolute top-4 left-4 right-4 flex items-center justify-start z-10">
+            
+          </div>
+          {/* Bottom Content */}
+          <div className="absolute bottom-0 left-0 right-0 p-8">
+            <div className="max-w-6xl mx-auto">
+              
             </div>
           </div>
         </div>
@@ -346,26 +320,39 @@ const EventDetailPage: React.FC = () => {
               {/* Event Header */}
               <div className="mb-8">
                 {/* Community Info */}
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
-                    {event.communityLogo ? (
-                      <img 
-                        src={event.communityLogo} 
-                        alt={`${event.communityName} logo`}
-                        className="w-full h-full object-cover rounded-full"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-full flex items-center justify-center">
-                        <Users className="h-5 w-5 text-black" />
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500 uppercase tracking-wide font-medium">Organized by</p>
-                    <h2 className="text-xl font-bold text-gray-900">{event.communityName}</h2>
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
+                      {event.communityLogo ? (
+                        <img 
+                          src={event.communityLogo} 
+                          alt={`${event.communityName} logo`}
+                          className="w-full h-full object-cover rounded-full"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-full flex items-center justify-center">
+                          <Users className="h-5 w-5 text-black" />
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500 uppercase tracking-wide font-medium">Organized by</p>
+                      <h2 className="text-xl font-bold text-gray-900">{event.communityName}</h2>
+                    </div>
                   </div>
                 </div>
                 {/* Event Title */}
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-yellow-400 text-black">
+                    {event.eventType}
+                  </span>
+                  {isUpcoming && (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-green-500 text-white">
+                      <CheckCircle className="h-4 w-4 mr-1" />
+                      Upcoming
+                    </span>
+                  )}
+                </div>
                 <h1 className="text-4xl font-bold text-gray-900 mb-6 leading-tight">
                   {event.title}
                 </h1>
