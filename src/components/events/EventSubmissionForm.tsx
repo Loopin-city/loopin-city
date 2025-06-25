@@ -142,9 +142,20 @@ const EventSubmissionForm: React.FC = () => {
     }
 
     try {
+      // Sanitize file name for Supabase storage
+      const sanitizeFileName = (fileName: string): string => {
+        // Remove or replace invalid characters
+        return fileName
+          .replace(/[^a-zA-Z0-9.-]/g, '_') // Replace special characters with underscore
+          .replace(/_{2,}/g, '_') // Replace multiple underscores with single
+          .replace(/^_+|_+$/g, '') // Remove leading/trailing underscores
+          .toLowerCase(); // Convert to lowercase
+      };
       
       const uploadFile = async (file: File, bucket: string, folder: string = '') => {
-        const fileName = `${folder}${Date.now()}-${file.name}`;
+        const sanitizedFileName = sanitizeFileName(file.name);
+        const fileExtension = file.name.split('.').pop();
+        const fileName = `${folder}${Date.now()}-${sanitizedFileName}`;
         console.log(`Uploading file: ${fileName} to bucket: ${bucket}`);
         
         const { data, error } = await supabase.storage
