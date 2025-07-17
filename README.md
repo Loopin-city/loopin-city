@@ -26,9 +26,8 @@ Loopin City is your open-source gateway to discovering and sharing local tech ev
 
 - **Frontend:** React, TypeScript, TailwindCSS
 - **Backend:** Supabase
-- **UI Components:** Lucide Icons
 - **Styling:** TailwindCSS with custom design system
-- **Deployment:** Vercel
+- **Deployment:** Render
 
 ## 🏗️ Project Structure
 
