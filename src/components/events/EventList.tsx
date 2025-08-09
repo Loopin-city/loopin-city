@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import EventCard from './EventCard';
 import type { Event } from '../../types';
 import { CalendarX, Sparkles, Search, Grid3X3, List, Calendar, MapPin, Users, Clock } from 'lucide-react';
@@ -11,6 +11,20 @@ interface EventListProps {
 
 const EventList: React.FC<EventListProps> = ({ events, loading = false }) => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile device for responsive optimizations
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   
   const generateEventGradient = (event: Event) => {
@@ -42,7 +56,7 @@ const EventList: React.FC<EventListProps> = ({ events, loading = false }) => {
 
   if (loading) {
     return (
-      <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" : "space-y-4"}>
+      <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6" : "space-y-4"}>
         {/* Loading Skeletons */}
         {[...Array(6)].map((_, index) => (
           <div key={index} className={`bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100 animate-pulse ${
@@ -51,7 +65,7 @@ const EventList: React.FC<EventListProps> = ({ events, loading = false }) => {
             {viewMode === 'grid' ? (
               <>
                 <div className="h-48 bg-gradient-to-br from-gray-200 to-gray-300"></div>
-                <div className="p-5">
+                <div className="p-4 sm:p-5">
                   <div className="flex items-center gap-2 mb-3">
                     <div className="w-6 h-6 bg-gray-200 rounded-full"></div>
                     <div className="h-4 bg-gray-200 rounded w-24"></div>
@@ -92,7 +106,7 @@ const EventList: React.FC<EventListProps> = ({ events, loading = false }) => {
   if (events.length === 0) {
     return (
       <div className="flex flex-col justify-center items-center py-16 px-4">
-        <div className="bg-white rounded-3xl shadow-lg border border-gray-100 px-8 py-12 text-center max-w-md mx-auto">
+        <div className="bg-white rounded-3xl shadow-lg border border-gray-100 px-6 sm:px-8 py-12 text-center max-w-md mx-auto">
           <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-full flex items-center justify-center mx-auto mb-6">
             <CalendarX className="h-8 w-8 text-black" />
           </div>
@@ -225,14 +239,15 @@ const EventList: React.FC<EventListProps> = ({ events, loading = false }) => {
   );
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 sm:space-y-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
-          <h2 className="text-2xl font-bold text-gray-900">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
             {events.length} {events.length === 1 ? 'Event' : 'Events'} Found
           </h2>
         </div>
         
+        {/* View mode toggle - visible on all devices */}
         <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
           <button 
             onClick={() => setViewMode('grid')}
@@ -260,7 +275,7 @@ const EventList: React.FC<EventListProps> = ({ events, loading = false }) => {
       </div>
       
       {viewMode === 'grid' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" style={{ gridAutoRows: 'max-content' }}>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6" style={{ gridAutoRows: 'max-content' }}>
           {events.map((event, index) => (
             <div 
               key={event.id} 
@@ -275,7 +290,7 @@ const EventList: React.FC<EventListProps> = ({ events, loading = false }) => {
           ))}
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           {events.map((event, index) => (
             <ListViewItem key={event.id} event={event} index={index} />
           ))}
@@ -283,8 +298,8 @@ const EventList: React.FC<EventListProps> = ({ events, loading = false }) => {
       )}
       
       {events.length > 0 && events.length % 6 === 0 && (
-        <div className="flex justify-center pt-8">
-          <button className="px-8 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl transition-colors flex items-center gap-2 group">
+        <div className="flex justify-center pt-6 sm:pt-8">
+          <button className="px-6 sm:px-8 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl transition-colors flex items-center gap-2 group">
             Load More Events
             <Sparkles className="h-4 w-4 group-hover:rotate-12 transition-transform" />
           </button>

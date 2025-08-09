@@ -172,10 +172,280 @@ code {
   .mobile-hidden {
     display: none;
   }
+  
+  /* Mobile touch optimizations */
+  .touch-device * {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Optimize animations for mobile */
+  .mobile-optimized {
+    transition-duration: 200ms;
+    will-change: transform;
+  }
+  
+  /* Better touch feedback */
+  .touch-feedback:active {
+    transform: scale(0.98);
+    transition-duration: 100ms;
+  }
+  
+  /* Disable hover effects on mobile */
+  @media (hover: none) {
+    .group:hover .group-hover\:bg-yellow-400 {
+      background-color: transparent;
+    }
+    
+    .group:hover .group-hover\:scale-110 {
+      transform: scale(1);
+    }
+    
+    .group:hover .group-hover\:scale-105 {
+      transform: scale(1);
+    }
+    
+    .group:hover .group-hover\:-translate-y-2 {
+      transform: translateY(0);
+    }
+    
+    .group:hover .group-hover\:scale-\[1\.02\] {
+      transform: scale(1);
+    }
+    
+    .group:hover .group-hover\:shadow-2xl {
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    }
+    
+    .group:hover .group-hover\:border-yellow-200 {
+      border-color: #fbbf24;
+    }
+    
+    .group:hover .group-hover\:text-black {
+      color: #000000;
+    }
+    
+    .group:hover .group-hover\:from-black {
+      background: linear-gradient(to bottom right, #000000, #1f2937);
+    }
+    
+    .group:hover .group-hover\:to-gray-800 {
+      background: linear-gradient(to bottom right, #000000, #1f2937);
+    }
+    
+    .group:hover .group-hover\:text-yellow-400 {
+      color: #fbbf24;
+    }
+    
+    .group:hover .group-hover\:bg-black {
+      background-color: #000000;
+    }
+    
+    .group:hover .group-hover\:text-yellow-400 {
+      color: #fbbf24;
+    }
+    
+    .group:hover .group-hover\:border-black {
+      border-color: #000000;
+    }
+    
+    .group:hover .group-hover\:shadow-xl {
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+    
+    .group:hover .group-hover\:translate-x-1 {
+      transform: translateX(0);
+    }
+    
+    .group:hover .group-hover\:rotate-12 {
+      transform: rotate(0deg);
+    }
+    
+    .group:hover .group-hover\:animate-none {
+      animation: none;
+    }
+  }
 }
 
 @media (min-width: 641px) {
   .desktop-hidden {
     display: none;
+  }
+} 
+
+/* Mobile-specific animations and optimizations */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.6s ease-out forwards;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.5s ease-out forwards;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.4s ease-out forwards;
+}
+
+/* Mobile performance optimizations */
+@media (max-width: 640px) {
+  /* Reduce animation complexity on mobile for better performance */
+  .mobile-optimized * {
+    will-change: auto;
+  }
+  
+  .mobile-optimized .group:hover * {
+    transition-duration: 200ms;
+  }
+  
+  /* Optimize transforms for mobile */
+  .mobile-optimized .group:hover .group-hover\:scale-110 {
+    transform: scale(1.05);
+  }
+  
+  .mobile-optimized .group:hover .group-hover\:scale-105 {
+    transform: scale(1.02);
+  }
+  
+  /* Reduce shadow complexity on mobile */
+  .mobile-optimized .group:hover .group-hover\:shadow-2xl {
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  }
+  
+  /* Optimize backdrop blur for mobile */
+  .mobile-optimized .backdrop-blur-sm {
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+  
+  /* Better touch feedback */
+  .mobile-optimized button:active,
+  .mobile-optimized a:active,
+  .mobile-optimized .touch-feedback:active {
+    transform: scale(0.96);
+    transition-duration: 100ms;
+  }
+  
+  /* Optimize image loading on mobile */
+  .mobile-optimized img {
+    loading: lazy;
+  }
+  
+  /* Reduce motion for users who prefer it */
+  @media (prefers-reduced-motion: reduce) {
+    .mobile-optimized * {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* Enhanced mobile grid layout */
+@media (max-width: 640px) {
+  .mobile-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .mobile-list {
+    gap: 0.75rem;
+  }
+  
+  /* Optimize card spacing on mobile */
+  .mobile-card {
+    margin-bottom: 0.75rem;
+  }
+  
+  /* Better mobile button sizing */
+  .mobile-button {
+    min-height: 44px;
+    padding: 0.75rem 1rem;
+  }
+  
+  /* Mobile-optimized text sizing */
+  .mobile-text-sm {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+  
+  .mobile-text-xs {
+    font-size: 0.75rem;
+    line-height: 1rem;
+  }
+}
+
+/* Smooth scrolling for mobile */
+@media (max-width: 640px) {
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  /* Optimize scroll performance */
+  .mobile-scroll {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+  
+  /* Better mobile focus states */
+  .mobile-focus:focus {
+    outline: 2px solid #fbbf24;
+    outline-offset: 2px;
+  }
+  
+  /* Mobile-optimized hover alternatives */
+  .mobile-hover {
+    transition: all 0.2s ease;
+  }
+  
+  .mobile-hover:active {
+    transform: scale(0.98);
+  }
+}
+
+/* Mobile-specific loading states */
+@media (max-width: 640px) {
+  .mobile-loading {
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
   }
 } 

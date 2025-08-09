@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { MapPin, Calendar, ExternalLink, Users, Clock, ArrowRight } from 'lucide-react';
 import type { Event } from '../../types';
@@ -9,6 +9,31 @@ interface EventCardProps {
 }
 
 const EventCard: React.FC<EventCardProps> = ({ event }) => {
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
+  
+  useEffect(() => {
+    // Detect touch device
+    const checkTouchDevice = () => {
+      const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      setIsTouchDevice(isTouch);
+      
+      // Apply touch-specific classes to body
+      if (isTouch) {
+        document.body.classList.add('touch-device');
+      } else {
+        document.body.classList.remove('touch-device');
+      }
+    };
+    
+    checkTouchDevice();
+    
+    // Re-check on resize (for devices that can switch between touch and mouse)
+    window.addEventListener('resize', checkTouchDevice);
+    
+    return () => {
+      window.removeEventListener('resize', checkTouchDevice);
+    };
+  }, []);
   
   const eventDate = new Date(event.date);
   const isToday = new Date().toDateString() === eventDate.toDateString();
@@ -32,23 +57,23 @@ const EventCard: React.FC<EventCardProps> = ({ event }) => {
   };
 
   return (
-    <div className="group relative bg-white hover:bg-yellow-400 rounded-2xl shadow-sm hover:shadow-2xl transition-all duration-500 ease-out overflow-hidden border border-gray-100 hover:border-yellow-200 transform hover:-translate-y-2 hover:scale-[1.02] flex flex-col h-full focus-within:ring-2 focus-within:ring-yellow-400 focus-within:ring-offset-2">
+    <div className={`group relative bg-white hover:bg-yellow-400 rounded-2xl shadow-sm hover:shadow-2xl transition-all duration-500 ease-out overflow-hidden border border-gray-100 hover:border-yellow-200 transform hover:-translate-y-2 hover:scale-[1.02] flex flex-col h-full focus-within:ring-2 focus-within:ring-yellow-400 focus-within:ring-offset-2 active:scale-[0.98] active:shadow-lg sm:active:scale-[0.98] sm:active:shadow-lg ${isTouchDevice ? 'mobile-optimized touch-feedback' : ''}`}>
       <div className="relative h-48 overflow-hidden flex-shrink-0">
         <img 
           src={event.imageUrl} 
           alt={event.title} 
-          className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110 group-focus-within:scale-110"
+          className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110 group-focus-within:scale-110 sm:group-hover:scale-110"
         />
         
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent group-hover:from-black/40 transition-all duration-500"></div>
         
-        <div className="absolute top-3 right-3 transform group-hover:scale-110 transition-transform duration-300">
+        <div className="absolute top-3 right-3 transform group-hover:scale-110 transition-transform duration-300 sm:group-hover:scale-110">
           <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-yellow-400 text-black shadow-lg group-hover:shadow-xl transition-all duration-300">
             {event.eventType}
           </span>
         </div>
         
-        <div className="absolute top-3 left-3 transform group-hover:scale-105 transition-transform duration-300">
+        <div className="absolute top-3 left-3 transform group-hover:scale-105 transition-transform duration-300 sm:group-hover:scale-105">
           <div className="bg-white/95 backdrop-blur-sm rounded-lg px-3 py-2 shadow-lg group-hover:shadow-xl transition-all duration-300">
             <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
               {getDateLabel()}
@@ -59,19 +84,19 @@ const EventCard: React.FC<EventCardProps> = ({ event }) => {
           </div>
         </div>
 
-        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-all duration-500 flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-all duration-500 flex items-center justify-center sm:group-hover:opacity-100">
           <Link 
             to={`/event/${event.id}`}
-            className="bg-white/20 backdrop-blur-sm text-white px-6 py-3 rounded-full font-semibold flex items-center gap-2 hover:bg-white/30 focus:bg-white/30 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 transition-all duration-300 transform hover:scale-105 active:scale-95"
+            className="bg-white/20 backdrop-blur-sm text-white px-6 py-3 rounded-full font-semibold flex items-center gap-2 hover:bg-white/30 focus:bg-white/30 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 transition-all duration-300 transform hover:scale-105 active:scale-95 sm:hover:scale-105"
           >
-            View Details <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+            View Details <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1 sm:group-hover:translate-x-1" />
           </Link>
         </div>
       </div>
       
       <div className="p-5 flex flex-col flex-grow">
         <div className="flex items-center gap-2 mb-3">
-          <div className="w-6 h-6 rounded-full flex items-center justify-center transition-all duration-500 overflow-hidden flex-shrink-0 group-hover:scale-110">
+          <div className="w-6 h-6 rounded-full flex items-center justify-center transition-all duration-500 overflow-hidden flex-shrink-0 group-hover:scale-110 sm:group-hover:scale-110">
             {event.communityLogo ? (
               <img 
                 src={event.communityLogo} 
@@ -79,37 +104,37 @@ const EventCard: React.FC<EventCardProps> = ({ event }) => {
                 className="w-full h-full object-cover rounded-full"
               />
             ) : (
-              <div className="w-full h-full bg-gradient-to-br from-yellow-400 to-yellow-500 group-hover:from-black group-hover:to-gray-800 rounded-full flex items-center justify-center transition-all duration-500">
-                <Users className="h-3 w-3 text-black group-hover:text-yellow-400 transition-colors duration-500" />
+              <div className="w-full h-full bg-gradient-to-br from-yellow-400 to-yellow-500 group-hover:from-black group-hover:to-gray-800 rounded-full flex items-center justify-center transition-all duration-500 sm:group-hover:from-black sm:group-hover:to-gray-800">
+                <Users className="h-3 w-3 text-black group-hover:text-yellow-400 transition-colors duration-500 sm:group-hover:text-yellow-400" />
               </div>
             )}
           </div>
-          <span className="text-sm font-medium text-gray-600 group-hover:text-black transition-colors duration-500">{event.communityName}</span>
+          <span className="text-sm font-medium text-gray-600 group-hover:text-black transition-colors duration-500 sm:group-hover:text-black">{event.communityName}</span>
         </div>
         
-        <h3 className="text-lg font-bold text-gray-900 group-hover:text-black mb-3 line-clamp-2 leading-tight transition-colors duration-500">
+        <h3 className="text-lg font-bold text-gray-900 group-hover:text-black mb-3 line-clamp-2 leading-tight transition-colors duration-500 sm:group-hover:text-black">
           <Link 
             to={`/event/${event.id}`}
-            className="hover:text-yellow-600 focus:text-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-1 rounded transition-all duration-300"
+            className="hover:text-yellow-600 focus:text-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-1 rounded transition-all duration-300 sm:hover:text-yellow-600"
           >
             {event.title}
           </Link>
         </h3>
         
         <div className="space-y-2 mb-4">
-          <div className="flex items-center text-sm text-gray-600 group-hover:text-black transition-colors duration-500">
-            <Calendar className="h-4 w-4 mr-2 text-yellow-500 group-hover:text-black flex-shrink-0 transition-colors duration-500 group-hover:scale-110" />
+          <div className="flex items-center text-sm text-gray-600 group-hover:text-black transition-colors duration-500 sm:group-hover:text-black">
+            <Calendar className="h-4 w-4 mr-2 text-yellow-500 group-hover:text-black flex-shrink-0 transition-colors duration-500 group-hover:scale-110 sm:group-hover:text-black sm:group-hover:scale-110" />
             <span className="truncate">
               {event.endDate ? formatDateRange(event.date, event.endDate) : formatDateTime(event.date)}
             </span>
           </div>
           
-          <div className="flex items-center text-sm text-gray-600 group-hover:text-black transition-colors duration-500">
-            <MapPin className="h-4 w-4 mr-2 text-yellow-500 group-hover:text-black flex-shrink-0 transition-colors duration-500 group-hover:scale-110" />
+          <div className="flex items-center text-sm text-gray-600 group-hover:text-black transition-colors duration-500 sm:group-hover:text-black">
+            <MapPin className="h-4 w-4 mr-2 text-yellow-500 group-hover:text-black flex-shrink-0 transition-colors duration-500 group-hover:scale-110 sm:group-hover:text-black sm:group-hover:scale-110" />
             <span className="truncate">
               {event.isOnline ? (
                 <span className="inline-flex items-center gap-1">
-                  <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse group-hover:animate-none"></span>
+                  <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse group-hover:animate-none sm:group-hover:animate-none"></span>
                   Online Event
                 </span>
               ) : (
@@ -120,7 +145,7 @@ const EventCard: React.FC<EventCardProps> = ({ event }) => {
         </div>
         
         <div className="mb-4 flex-grow">
-          <p className="text-sm text-gray-600 group-hover:text-black transition-colors duration-500 leading-relaxed line-clamp-2">
+          <p className="text-sm text-gray-600 group-hover:text-black transition-colors duration-500 leading-relaxed line-clamp-2 sm:group-hover:text-black">
             {event.description}
           </p>
           
@@ -159,7 +184,7 @@ const EventCard: React.FC<EventCardProps> = ({ event }) => {
         <div className="flex gap-2 mt-auto">
           <Link 
             to={`/event/${event.id}`}
-            className="flex-1 bg-gray-50 hover:bg-white group-hover:bg-black group-hover:text-yellow-400 text-gray-700 text-sm font-semibold py-2.5 px-4 rounded-lg transition-all duration-500 text-center border border-gray-200 group-hover:border-black focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-1 transform hover:scale-105 active:scale-95"
+            className="flex-1 bg-gray-50 hover:bg-white group-hover:bg-black group-hover:text-yellow-400 text-gray-700 text-sm font-semibold py-2.5 px-4 rounded-lg transition-all duration-500 text-center border border-gray-200 group-hover:border-black focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-1 transform hover:scale-105 active:scale-95 sm:hover:scale-105 sm:group-hover:bg-black sm:group-hover:text-yellow-400 sm:group-hover:border-black"
           >
             Learn More
           </Link>
@@ -168,9 +193,9 @@ const EventCard: React.FC<EventCardProps> = ({ event }) => {
             href={event.registrationUrl}
             target="_blank"
             rel="noopener noreferrer" 
-            className="flex-1 bg-yellow-400 hover:bg-yellow-500 group-hover:bg-black group-hover:text-yellow-400 text-black text-sm font-bold py-2.5 px-4 rounded-lg transition-all duration-500 text-center shadow-sm hover:shadow-xl flex items-center justify-center gap-1 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-1 transform hover:scale-105 active:scale-95"
+            className="flex-1 bg-yellow-400 hover:bg-yellow-500 group-hover:bg-black group-hover:text-yellow-400 text-black text-sm font-bold py-2.5 px-4 rounded-lg transition-all duration-500 text-center shadow-sm hover:shadow-xl flex items-center justify-center gap-1 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-1 transform hover:scale-105 active:scale-95 sm:hover:scale-105 sm:hover:bg-yellow-500 sm:group-hover:bg-black sm:group-hover:text-yellow-400"
           >
-            Register <ExternalLink className="h-3 w-3 transition-transform duration-300 group-hover:rotate-12" />
+            Register <ExternalLink className="h-3 w-3 transition-transform duration-300 group-hover:rotate-12 sm:group-hover:rotate-12" />
           </a>
         </div>
       </div>
