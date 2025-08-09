@@ -1,10 +1,94 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, MapPin } from 'lucide-react';
 import { useLocation as useLocationContext } from '../../contexts/LocationContext';
+import { City } from '../../types';
+
+// Memoized navigation items for performance
+const navigationItems = [
+  { to: '/', label: 'Events' },
+  { to: '/communities', label: 'Communities' },
+  { to: '/venues', label: 'Venue Partners' },
+  { to: '/submit-event', label: 'Submit Event' },
+  { to: '/about', label: 'About' },
+  { to: '/open-source', label: 'Open Source' },
+  { to: '/alerts', label: 'Get Alerts' },
+];
+
+// Memoized navigation link component
+const NavigationLink = memo(({ to, label, isActive, onClick }: { 
+  to: string; 
+  label: string; 
+  isActive: boolean; 
+  onClick?: () => void;
+}) => (
+  <Link
+    to={to}
+    className={`group relative px-4 py-2.5 font-mono text-base font-semibold transition-all duration-300 border-b-2 border-transparent hover:scale-105 transform-gpu rounded-lg ${
+      isActive 
+        ? 'border-accent-black text-accent-black bg-yellow-50/80 shadow-sm' 
+        : 'hover:border-accent-black hover:text-accent-black text-gray-700 hover:bg-yellow-50/50 hover:shadow-md'
+    }`}
+    onClick={onClick}
+    aria-current={isActive ? 'page' : undefined}
+  >
+    <span className="relative">
+      {label}
+      {isActive && (
+        <div className="absolute -bottom-2 left-0 right-0 h-0.5 bg-accent-black rounded-full animate-pulse" />
+      )}
+    </span>
+  </Link>
+));
+
+// Memoized mobile menu item component
+const MobileMenuItem = memo(({ to, label, isActive, onClick, index }: { 
+  to: string; 
+  label: string; 
+  isActive: boolean; 
+  onClick: () => void;
+  index: number;
+}) => (
+  <Link
+    to={to}
+    className={`group relative px-6 py-4 text-lg font-semibold text-left transition-all duration-300 hover:bg-yellow-100 active:bg-yellow-200 border-l-4 border-transparent min-h-[56px] flex items-center ${
+      isActive 
+        ? 'text-accent-black font-bold border-l-accent-black bg-yellow-50 shadow-lg' 
+        : 'text-accent-black hover:border-l-yellow-300 hover:shadow-md'
+    } animate-menuItem transform-gpu hover:scale-[1.02]`}
+    style={{ animationDelay: `${0.05 * index + 0.1}s` }}
+    onClick={onClick}
+    aria-current={isActive ? 'page' : undefined}
+  >
+    <span className="relative">
+      {label}
+      {isActive && (
+        <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-accent-black rounded-full animate-pulse" />
+      )}
+    </span>
+  </Link>
+));
+
+// Enhanced location button component
+const LocationButton = memo(({ selectedCity, setShowLocationModal }: { 
+  selectedCity: City | null; 
+  setShowLocationModal: (show: boolean) => void;
+}) => (
+  <button
+    onClick={() => setShowLocationModal(true)}
+    className="group flex items-center space-x-2 text-accent-black hover:bg-yellow-200 hover:shadow-lg px-4 py-2.5 rounded-xl transition-all duration-300 border-2 border-accent-black text-sm sm:text-base min-h-[44px] justify-center transform-gpu hover:scale-105 active:scale-95 bg-white/80 backdrop-blur-sm shadow-md hover:shadow-xl"
+    aria-label={`Select city. Current city: ${selectedCity?.name || 'None selected'}`}
+  >
+    <MapPin className="h-4 w-4 group-hover:rotate-12 transition-transform duration-300" />
+    <span className="hidden md:inline font-semibold">{selectedCity?.name || 'Select City'}</span>
+    <span className="hidden sm:inline md:hidden font-semibold">{selectedCity?.name ? selectedCity.name.substring(0, 8) : 'Select'}</span>
+    <span className="sm:hidden font-semibold">{selectedCity?.name || 'City'}</span>
+  </button>
+));
 
 const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const location = useLocation();
   const { selectedCity, setShowLocationModal } = useLocationContext();
   
@@ -20,18 +104,28 @@ const Header: React.FC = () => {
       document.body.style.overflow = 'unset';
     };
   }, [isMenuOpen]);
+
+  // Handle scroll effect for enhanced visual feedback
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
   
-  const toggleMenu = () => {
+  const toggleMenu = useCallback(() => {
     setIsMenuOpen(!isMenuOpen);
-  };
+  }, [isMenuOpen]);
   
-  const closeMenu = () => {
+  const closeMenu = useCallback(() => {
     setIsMenuOpen(false);
-  };
+  }, []);
   
-  const isActive = (path: string) => {
+  const isActive = useCallback((path: string) => {
     return location.pathname === path;
-  };
+  }, [location.pathname]);
   
   // Handle escape key to close menu
   useEffect(() => {
@@ -48,93 +142,78 @@ const Header: React.FC = () => {
     return () => {
       document.removeEventListener('keydown', handleEscape);
     };
-  }, [isMenuOpen]);
+  }, [isMenuOpen, closeMenu]);
   
   return (
-    <header className="bg-primary text-accent-black sticky top-0 z-50 shadow-sm">
-      <div className="px-2 sm:px-4 lg:px-6">
-        <div className="flex justify-between h-12 sm:h-14 items-center">
+    <header 
+      className={`bg-primary text-accent-black sticky top-0 z-50 transition-all duration-300 ${
+        isScrolled 
+          ? 'shadow-xl border-b-2 border-accent-black/20' 
+          : 'shadow-md'
+      }`}
+    >
+      <div className="px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between h-16 sm:h-18 items-center">
+          
+          {/* Logo and Brand */}
           <div className="flex items-center">
-            <Link to="/" className="flex-shrink-0 flex items-center group" onClick={closeMenu}>
-              <img src="/loopin-logo.svg" alt="Loopin Logo" className="h-16 sm:h-20 w-auto" />
-              <span className="ml-2 text-xl sm:text-2xl font-extrabold text-accent-black group-hover:underline flex items-center" style={{ fontFamily: 'Urbanist, Inter, Space Grotesk, Arial, sans-serif', lineHeight: 1 }}>Loopin</span>
+            <Link 
+              to="/" 
+              className="flex-shrink-0 flex items-center group transform-gpu hover:scale-105 transition-transform duration-300" 
+              onClick={closeMenu}
+            >
+              <img 
+                src="/loopin-logo.svg" 
+                alt="Loopin Logo" 
+                className="h-16 sm:h-20 w-auto transition-transform duration-300 group-hover:rotate-3" 
+              />
+              <span 
+                className="ml-2 sm:ml-3 text-xl sm:text-2xl font-extrabold text-accent-black group-hover:underline transition-all duration-300 flex items-center" 
+                style={{ fontFamily: 'Urbanist, Inter, Space Grotesk, Arial, sans-serif', lineHeight: 1 }}
+              >
+                Loopin
+              </span>
             </Link>
           </div>
-          <nav className="hidden sm:flex sm:space-x-4 lg:space-x-6 items-center" role="navigation" aria-label="Main navigation">
-            <Link
-              to="/"
-              className={`px-2 py-1 font-mono text-lg font-semibold transition-colors duration-200 border-b-2 border-transparent ${isActive('/') ? 'border-accent-black text-accent-black' : 'hover:border-accent-black hover:text-accent-black text-gray-700'}`}
-              aria-current={isActive('/') ? 'page' : undefined}
-            >
-              Events
-            </Link>
-            <Link
-              to="/communities"
-              className={`px-2 py-1 font-mono text-lg font-semibold transition-colors duration-200 border-b-2 border-transparent ${isActive('/communities') ? 'border-accent-black text-accent-black' : 'hover:border-accent-black hover:text-accent-black text-gray-700'}`}
-              aria-current={isActive('/communities') ? 'page' : undefined}
-            >
-              Communities
-            </Link>
-            <Link
-              to="/venues"
-              className={`px-2 py-1 font-mono text-lg font-semibold transition-colors duration-200 border-b-2 border-transparent ${isActive('/venues') ? 'border-accent-black text-accent-black' : 'hover:border-accent-black hover:text-accent-black text-gray-700'}`}
-              aria-current={isActive('/venues') ? 'page' : undefined}
-            >
-              Venue Partners
-            </Link>
-            <Link
-              to="/submit-event"
-              className={`px-2 py-1 font-mono text-lg font-semibold transition-colors duration-200 border-b-2 border-transparent ${isActive('/submit-event') ? 'border-accent-black text-accent-black' : 'hover:border-accent-black hover:text-accent-black text-gray-700'}`}
-              aria-current={isActive('/submit-event') ? 'page' : undefined}
-            >
-              Submit Event
-            </Link>
-            <Link
-              to="/about"
-              className={`px-2 py-1 font-mono text-lg font-semibold transition-colors duration-200 border-b-2 border-transparent ${isActive('/about') ? 'border-accent-black text-accent-black' : 'hover:border-accent-black hover:text-accent-black text-gray-700'}`}
-              aria-current={isActive('/about') ? 'page' : undefined}
-            >
-              About
-            </Link>
-            <Link
-              to="/open-source"
-              className={`px-2 py-1 font-mono text-lg font-semibold transition-colors duration-200 border-b-2 border-transparent ${isActive('/open-source') ? 'border-accent-black text-accent-black' : 'hover:border-accent-black hover:text-accent-black text-gray-700'}`}
-              aria-current={isActive('/open-source') ? 'page' : undefined}
-            >
-              Open Source
-            </Link>
-            <Link
-              to="/alerts"
-              className={`px-2 py-1 font-mono text-lg font-semibold transition-colors duration-200 border-b-2 border-transparent ${isActive('/alerts') ? 'border-accent-black text-accent-black' : 'hover:border-accent-black hover:text-accent-black text-gray-700'}`}
-              aria-current={isActive('/alerts') ? 'page' : undefined}
-            >
-              Get Alerts
-            </Link>
+
+          {/* Desktop Navigation */}
+          <nav 
+            className="hidden lg:flex lg:space-x-3 xl:space-x-5 items-center" 
+            role="navigation" 
+            aria-label="Main navigation"
+          >
+            {navigationItems.map((item) => (
+              <NavigationLink
+                key={item.to}
+                to={item.to}
+                label={item.label}
+                isActive={isActive(item.to)}
+              />
+            ))}
           </nav>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowLocationModal(true)}
-              className="flex items-center space-x-1 text-accent-black hover:bg-yellow-200 px-2 py-1 rounded transition-colors duration-200 border border-accent-black text-sm sm:text-base min-h-[44px] min-w-[44px] justify-center"
-              aria-label={`Select city. Current city: ${selectedCity?.name || 'None selected'}`}
-            >
-              <MapPin className="h-4 w-4" />
-              <span className="hidden sm:inline">{selectedCity?.name || 'Select City'}</span>
-              <span className="sm:hidden">{selectedCity?.name ? selectedCity.name[0] : <span className='text-xs'>City</span>}</span>
-            </button>
-            <div className="flex items-center sm:hidden">
+
+          {/* Right Side Controls */}
+          <div className="flex items-center gap-3">
+            <LocationButton 
+              selectedCity={selectedCity} 
+              setShowLocationModal={setShowLocationModal} 
+            />
+            
+            {/* Mobile Menu Button */}
+            <div className="flex items-center lg:hidden">
               <button
                 type="button"
                 onClick={toggleMenu}
-                className="inline-flex items-center justify-center p-3 rounded-md text-accent-black hover:bg-yellow-200 focus:outline-none focus:ring-2 focus:ring-accent-black focus:ring-offset-2 transition-all duration-200 min-h-[44px] min-w-[44px]"
+                className="group inline-flex items-center justify-center p-3 rounded-xl text-accent-black hover:bg-yellow-200 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-accent-black focus:ring-offset-2 transition-all duration-300 min-h-[44px] min-w-[44px] transform-gpu hover:scale-105 active:scale-95 bg-white/80 backdrop-blur-sm shadow-md hover:shadow-xl"
                 aria-expanded={isMenuOpen}
                 aria-controls="mobile-menu"
                 aria-label={isMenuOpen ? 'Close main menu' : 'Open main menu'}
               >
                 <span className="sr-only">{isMenuOpen ? 'Close main menu' : 'Open main menu'}</span>
                 {isMenuOpen ? (
-                  <X className="block h-6 w-6" aria-hidden="true" />
+                  <X className="block h-6 w-6 group-hover:rotate-90 transition-transform duration-300" aria-hidden="true" />
                 ) : (
-                  <Menu className="block h-6 w-6" aria-hidden="true" />
+                  <Menu className="block h-6 w-6 group-hover:rotate-90 transition-transform duration-300" aria-hidden="true" />
                 )}
               </button>
             </div>
@@ -145,52 +224,38 @@ const Header: React.FC = () => {
       {/* Enhanced Mobile Navigation */}
       {isMenuOpen && (
         <>
-          {/* Backdrop with improved accessibility */}
+                    {/* Enhanced Backdrop */}
           <div 
-            className="fixed left-0 right-0 top-12 sm:top-14 bottom-0 z-30 bg-black/20 backdrop-blur-sm transition-opacity duration-200" 
+            className="fixed left-0 right-0 top-16 sm:top-18 bottom-0 z-30 bg-black/30 backdrop-blur-sm transition-opacity duration-300" 
             onClick={closeMenu}
             aria-hidden="true"
           />
           
-          {/* Mobile Menu with enhanced animations and accessibility */}
+          {/* Enhanced Mobile Menu */}
           <div 
             id="mobile-menu"
-            className="sm:hidden fixed left-0 right-0 top-12 sm:top-14 z-50 bg-primary shadow-xl border-t-2 border-accent-black animate-slideDown"
+            className="lg:hidden fixed left-0 right-0 top-16 sm:top-18 z-50 bg-primary shadow-2xl border-t-2 border-accent-black animate-slideDown"
             role="navigation"
             aria-label="Mobile navigation"
           >
-            <nav className="flex flex-col py-2">
-              {[
-                { to: '/', label: 'Events' },
-                { to: '/communities', label: 'Communities' },
-                { to: '/venues', label: 'Venue Partners' },
-                { to: '/submit-event', label: 'Submit Event' },
-                { to: '/about', label: 'About' },
-                { to: '/open-source', label: 'Open Source' },
-                { to: '/alerts', label: 'Get Alerts' },
-              ].map((item, idx) => (
-                <Link
+            <nav className="flex flex-col py-4">
+              {navigationItems.map((item, idx) => (
+                <MobileMenuItem
                   key={item.to}
                   to={item.to}
-                  className={`px-6 py-4 text-lg font-semibold text-left transition-all duration-200 hover:bg-yellow-100 active:bg-yellow-200 border-l-4 border-transparent ${
-                    isActive(item.to) 
-                      ? 'text-accent-black font-bold border-l-accent-black bg-yellow-50' 
-                      : 'text-accent-black hover:border-l-yellow-300'
-                  } animate-menuItem min-h-[56px] flex items-center`}
-                  style={{ animationDelay: `${0.05 * idx + 0.1}s` }}
+                  label={item.label}
+                  isActive={isActive(item.to)}
                   onClick={closeMenu}
-                  aria-current={isActive(item.to) ? 'page' : undefined}
-                >
-                  {item.label}
-                </Link>
+                  index={idx}
+                />
               ))}
             </nav>
             
-            {/* Enhanced close button for better UX */}
-            <div className="border-t border-accent-black p-4">
+            {/* Enhanced Close Button */}
+            <div className="border-t border-accent-black/20 p-4 bg-white/10">
               <button
                 onClick={closeMenu}
-                className="w-full py-3 px-6 bg-accent-black text-yellow-400 rounded-lg font-medium hover:bg-gray-800 active:bg-gray-900 transition-colors duration-200 min-h-[44px]"
+                className="w-full py-3 px-6 bg-accent-black text-yellow-400 rounded-lg font-medium hover:bg-gray-800 active:bg-gray-900 transition-all duration-300 min-h-[44px] transform-gpu hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl"
                 aria-label="Close menu"
               >
                 Close Menu
@@ -203,4 +268,4 @@ const Header: React.FC = () => {
   );
 };
 
-export default Header;
+export default memo(Header);
