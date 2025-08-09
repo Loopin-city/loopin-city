@@ -103,26 +103,44 @@ const Header: React.FC = () => {
   const location = useLocation();
   const { selectedCity, setShowLocationModal } = useLocationContext();
   
-  // Prevent body scroll when mobile menu is open
+  // Enhanced body scroll prevention when mobile menu is open
   useEffect(() => {
     if (isMenuOpen) {
+      // Store current scroll position
+      const scrollY = window.scrollY;
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = '100%';
       document.body.style.overflow = 'hidden';
     } else {
-      document.body.style.overflow = 'unset';
+      // Restore scroll position
+      const scrollY = document.body.style.top;
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
+      document.body.style.overflow = '';
+      if (scrollY) {
+        window.scrollTo(0, parseInt(scrollY || '0') * -1);
+      }
     }
     
     return () => {
-      document.body.style.overflow = 'unset';
+      // Cleanup: restore body scroll
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
+      document.body.style.overflow = '';
     };
   }, [isMenuOpen]);
 
-  // Handle scroll effect for enhanced visual feedback
+  // Enhanced scroll effect for consistent header behavior
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10);
+      const scrollY = window.scrollY;
+      setIsScrolled(scrollY > 10);
     };
 
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
   
@@ -157,7 +175,7 @@ const Header: React.FC = () => {
   
   return (
     <header 
-      className={`bg-primary text-accent-black sticky top-0 z-50 transition-all duration-300 header-safe-area ${
+      className={`bg-primary text-accent-black fixed top-0 left-0 right-0 z-50 transition-all duration-300 header-safe-area ${
         isScrolled 
           ? 'shadow-xl border-b-2 border-accent-black/20' 
           : 'shadow-md'
@@ -239,11 +257,12 @@ const Header: React.FC = () => {
       {/* Enhanced Mobile Navigation */}
       {isMenuOpen && (
         <>
-                    {/* Enhanced Backdrop */}
+          {/* Enhanced Backdrop - Fixed positioning to prevent scroll */}
           <div 
             className="fixed left-0 right-0 top-16 sm:top-18 bottom-0 z-30 bg-black/30 backdrop-blur-sm transition-opacity duration-300" 
             onClick={closeMenu}
             aria-hidden="true"
+            style={{ touchAction: 'none' }}
           />
           
           {/* Enhanced Mobile Menu */}
@@ -252,6 +271,7 @@ const Header: React.FC = () => {
             className="lg:hidden fixed left-0 right-0 top-16 sm:top-18 z-50 bg-primary shadow-2xl border-t-2 border-accent-black animate-slideDown"
             role="navigation"
             aria-label="Mobile navigation"
+            style={{ touchAction: 'none' }}
           >
             <nav className="flex flex-col py-4">
               {navigationItems.map((item, idx) => (

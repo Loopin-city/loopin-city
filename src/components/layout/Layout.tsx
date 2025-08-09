@@ -8,8 +8,10 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="min-h-screen flex flex-col">
       <Header />
+      {/* Spacer to prevent content from being hidden behind fixed header */}
+      <div className="h-16 sm:h-18"></div>
       <main className="flex-grow">
         <div style={{ backgroundColor: '#fef3c7', minHeight: '100%' }}>
           {children}
