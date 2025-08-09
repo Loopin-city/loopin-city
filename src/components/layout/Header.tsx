@@ -202,6 +202,7 @@ const Header: React.FC = () => {
                 to={item.to}
                 label={item.label}
                 isActive={isActive(item.to)}
+                onClick={() => {}} // Empty function to trigger scrollToTop
               />
             ))}
           </nav>
