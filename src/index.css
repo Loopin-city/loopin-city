@@ -17,6 +17,87 @@
     font-family: 'Urbanist', 'Inter', 'Space Grotesk', Arial, sans-serif !important;
   }
 
+  /* Safe area handling for modern phones with notches, dynamic islands, and camera cutouts */
+  body {
+    /* Fill the entire viewport with theme color */
+    background-color: #fef3c7; /* bg-primary yellow color */
+    min-height: 100vh;
+    min-height: 100dvh; /* Dynamic viewport height for mobile browsers */
+  }
+
+  /* Ensure the root element fills the entire viewport */
+  #root {
+    min-height: 100vh;
+    min-height: 100dvh;
+    background-color: #fef3c7; /* bg-primary yellow color */
+  }
+
+  /* Handle safe area insets for modern devices */
+  @supports (padding: max(0px)) {
+    body {
+      padding-top: env(safe-area-inset-top);
+      padding-left: env(safe-area-inset-left);
+      padding-right: env(safe-area-inset-right);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+  }
+
+  /* Specific handling for devices with dynamic islands and notches */
+  @supports (padding: max(0px)) {
+    .header-container {
+      padding-top: max(env(safe-area-inset-top), 0px);
+      padding-left: max(env(safe-area-inset-left), 0px);
+      padding-right: max(env(safe-area-inset-right), 0px);
+    }
+  }
+
+  /* Enhanced viewport handling for modern mobile devices */
+  @media screen and (max-width: 768px) {
+    /* Ensure full viewport coverage */
+    html, body {
+      background-color: #fef3c7; /* bg-primary yellow color */
+      overflow-x: hidden;
+    }
+    
+    /* Handle status bar and navigation bar areas */
+    @supports (padding: max(0px)) {
+      body {
+        padding-top: max(env(safe-area-inset-top), 0px);
+        padding-bottom: max(env(safe-area-inset-bottom), 0px);
+      }
+    }
+  }
+
+  /* iPhone-specific optimizations */
+  @supports (-webkit-touch-callout: none) {
+    body {
+      /* Prevent rubber band scrolling on iOS */
+      -webkit-overflow-scrolling: touch;
+      /* Ensure proper viewport handling on iOS */
+      min-height: -webkit-fill-available;
+    }
+  }
+
+  /* Header safe area handling */
+  .header-safe-area {
+    @supports (padding: max(0px)) {
+      padding-top: max(env(safe-area-inset-top), 0px);
+      padding-left: max(env(safe-area-inset-left), 0px);
+      padding-right: max(env(safe-area-inset-right), 0px);
+    }
+  }
+
+  /* Full viewport background for modern devices */
+  .viewport-fill {
+    background-color: #fef3c7; /* bg-primary yellow color */
+    min-height: 100vh;
+    min-height: 100dvh;
+    @supports (padding: max(0px)) {
+      padding-top: max(env(safe-area-inset-top), 0px);
+      padding-bottom: max(env(safe-area-inset-bottom), 0px);
+    }
+  }
+
   h1, h2, h3, h4, h5, h6, p, a, button, input, textarea, select, label, span, div {
     font-family: 'Urbanist', 'Inter', 'Space Grotesk', Arial, sans-serif !important;
   }

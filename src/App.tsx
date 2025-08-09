@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import LocationModal from './components/location/LocationModal';
 import { LocationProvider } from './contexts/LocationContext';
@@ -22,7 +22,7 @@ import NotFoundPage from './pages/NotFoundPage';
 function App() {
   return (
     <LocationProvider>
-      <div className="App">
+      <div className="App viewport-fill">
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/event/:id" element={<EventDetailPage />} />

@@ -157,7 +157,7 @@ const Header: React.FC = () => {
   
   return (
     <header 
-      className={`bg-primary text-accent-black sticky top-0 z-50 transition-all duration-300 ${
+      className={`bg-primary text-accent-black sticky top-0 z-50 transition-all duration-300 header-safe-area ${
         isScrolled 
           ? 'shadow-xl border-b-2 border-accent-black/20' 
           : 'shadow-md'
