@@ -4,7 +4,7 @@ import Layout from '../components/layout/Layout';
 const AboutPage: React.FC = () => {
   return (
     <Layout>
-      <div className="min-h-screen bg-gradient-to-b from-white via-yellow-50 to-white py-12 px-2 flex flex-col items-center justify-center" style={{ backgroundImage: "url('/Sprinkle.svg')", backgroundRepeat: 'repeat', backgroundSize: '500px', backgroundPosition: 'center' }}>
+      <div className="min-h-screen py-12 px-2 flex flex-col items-center justify-center" style={{ backgroundColor: '#fef3c7' }}>
         <div className="max-w-3xl mx-auto text-center mb-12">
           <h1 className="text-4xl sm:text-5xl font-extrabold text-accent-black mb-4" style={{ fontFamily: 'Urbanist, Inter, Space Grotesk, Arial, sans-serif' }}>
             Why Loopin?

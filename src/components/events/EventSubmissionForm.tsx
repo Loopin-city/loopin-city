@@ -839,7 +839,7 @@ const EventSubmissionForm: React.FC = () => {
 
   if (showPreview) {
     return (
-      <div className="bg-white p-8 rounded-3xl shadow-lg max-w-2xl mx-auto mt-8" style={{ fontFamily: 'Urbanist, Inter, Space Grotesk, Arial, sans-serif', backgroundImage: "url('/Sprinkle.svg')", backgroundRepeat: 'repeat', backgroundSize: '500px', backgroundPosition: 'center' }}>
+      <div className="bg-white p-8 rounded-3xl shadow-lg max-w-2xl mx-auto mt-8" style={{ fontFamily: 'Urbanist, Inter, Space Grotesk, Arial, sans-serif', backgroundColor: '#fef3c7' }}>
         <h2 className="text-2xl font-extrabold mb-6 text-black">Preview Your Event</h2>
         <div className="mb-6 flex flex-col items-center">
           {bannerPreview && (

@@ -224,7 +224,7 @@ const EventDetailPage: React.FC = () => {
   if (loading) {
     return (
       <Layout>
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen" style={{ backgroundColor: '#fef3c7' }}>
           {/* Loading Overlay */}
           <div className="relative h-96 bg-gradient-to-br from-gray-200 to-gray-300 animate-pulse">
             <div className="absolute inset-0 bg-black/40"></div>
@@ -253,7 +253,7 @@ const EventDetailPage: React.FC = () => {
   if (error || !event) {
     return (
       <Layout>
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#fef3c7' }}>
           <div className="text-center max-w-md mx-auto px-4">
             <div className="w-16 h-16 bg-gradient-to-br from-red-400 to-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
               <Info className="h-8 w-8 text-white" />
@@ -293,7 +293,7 @@ const EventDetailPage: React.FC = () => {
         <ArrowLeft className="h-4 w-4 mr-2" />
         <span>Back to Events</span>
       </Link>
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen" style={{ backgroundColor: '#fef3c7' }}>
         {/* Banner Section */}
         <div className="relative w-full aspect-video overflow-hidden">
           <img 

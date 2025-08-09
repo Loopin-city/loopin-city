@@ -217,7 +217,7 @@ const citiesByState: { [key: string]: City[] } = {
 const SubscribeAlertsPage: React.FC = () => {
   return (
     <Layout>
-      <div className="min-h-screen flex flex-col items-center justify-center py-12 px-4 bg-accent-cream" style={{ backgroundImage: "url('/Sprinkle.svg')", backgroundRepeat: 'repeat', backgroundSize: '500px', backgroundPosition: 'center' }}>
+      <div className="min-h-screen flex flex-col items-center justify-center py-12 px-4 bg-accent-cream" style={{ backgroundColor: '#fef3c7' }}>
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-10 max-w-md w-full flex flex-col items-center text-center">
           <div className="bg-yellow-400 text-accent-black rounded-full px-6 py-3 mb-8 flex items-center gap-3 shadow-sm">
             <AnimatedClock />

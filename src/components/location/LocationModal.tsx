@@ -114,7 +114,7 @@ const LocationModal: React.FC = () => {
             </div>
           </div>
           <div className="w-3/5 sm:w-2/3 bg-white flex flex-col rounded-br-3xl sm:rounded-tr-3xl relative min-h-[200px] sm:min-h-[400px] max-h-[65vh] sm:max-h-[70vh] overflow-y-auto"
-            style={{ backgroundImage: "url('/Sprinkle.svg')", backgroundRepeat: 'repeat', backgroundSize: '500px', backgroundPosition: 'center' }}>
+            style={{ backgroundColor: '#fef3c7' }}>
             {loading ? (
               <div className="flex flex-1 flex-col items-center justify-center h-full w-full text-gray-400 p-4">
                 <MapPin className="h-10 w-10 sm:h-12 sm:w-12 mb-2 animate-pulse" />

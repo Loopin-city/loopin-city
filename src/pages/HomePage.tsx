@@ -194,7 +194,7 @@ const HomePage: React.FC = () => {
         </div>
       </div>
       
-      <div className="bg-white min-h-[400px]" style={{ backgroundImage: "url('/Sprinkle.svg')", backgroundRepeat: 'repeat', backgroundSize: '300px sm:500px', backgroundPosition: 'center' }}>
+      <div className="bg-white min-h-[400px]" style={{ backgroundColor: '#fef3c7' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
           <EventFilters
             startDate={startDate}

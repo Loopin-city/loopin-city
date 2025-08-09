@@ -61,7 +61,7 @@ const SponsorsCarousel: React.FC<SponsorsCarouselProps> = ({ sponsors }) => {
   return (
     <div 
       className="rounded-2xl shadow-sm p-6 bg-yellow-50 border border-yellow-200"
-      style={{ backgroundImage: "url('/Sprinkle.svg')", backgroundSize: '400px', backgroundPosition: 'center' }}
+              style={{ backgroundColor: '#fef3c7' }}
     >
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-xl font-bold text-gray-900">

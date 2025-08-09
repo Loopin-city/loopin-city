@@ -170,12 +170,9 @@ const VenuePartnersPage: React.FC = () => {
   return (
     <Layout>
       <div
-        className="min-h-screen bg-gradient-to-b from-white via-yellow-50 to-white py-10 px-2"
+        className="min-h-screen py-10 px-2"
         style={{
-          backgroundImage: "url('/Sprinkle.svg')",
-          backgroundRepeat: 'repeat',
-          backgroundSize: '500px',
-          backgroundPosition: 'center',
+          backgroundColor: '#fef3c7',
         }}
       >
         <div className="max-w-3xl mx-auto">

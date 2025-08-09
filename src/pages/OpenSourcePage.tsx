@@ -9,7 +9,7 @@ const OpenSourcePage: React.FC = () => {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gradient-to-b from-white via-yellow-50 to-white py-12 px-2 flex flex-col items-center justify-center" style={{ backgroundImage: "url('/Sprinkle.svg')", backgroundRepeat: 'repeat', backgroundSize: '500px', backgroundPosition: 'center' }}>
+      <div className="min-h-screen py-12 px-2 flex flex-col items-center justify-center" style={{ backgroundColor: '#fef3c7' }}>
         <div className="max-w-4xl mx-auto text-center mb-12">
           <div className="flex justify-center mb-6">
             <div className="bg-yellow-400 p-4 rounded-full">
