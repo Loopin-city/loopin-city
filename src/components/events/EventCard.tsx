@@ -123,6 +123,37 @@ const EventCard: React.FC<EventCardProps> = ({ event }) => {
           <p className="text-sm text-gray-600 group-hover:text-black transition-colors duration-500 leading-relaxed line-clamp-2">
             {event.description}
           </p>
+          
+          {/* Sponsors Section */}
+          {event.sponsors && event.sponsors.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-gray-100">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Sponsored by</span>
+                <span className="text-xs text-gray-400">({event.sponsors.length})</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {event.sponsors.slice(0, 3).map((sponsor, index) => (
+                  <div key={sponsor.id || index} className="flex items-center gap-2 bg-gray-50 rounded-lg px-2 py-1">
+                    {sponsor.banner_url && (
+                      <img 
+                        src={sponsor.banner_url} 
+                        alt={`${sponsor.name} logo`}
+                        className="w-4 h-4 object-cover rounded"
+                      />
+                    )}
+                    <span className="text-xs font-medium text-gray-700 truncate max-w-20">
+                      {sponsor.name}
+                    </span>
+                  </div>
+                ))}
+                {event.sponsors.length > 3 && (
+                  <span className="text-xs text-gray-400 px-2 py-1">
+                    +{event.sponsors.length - 3} more
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
         </div>
         
         <div className="flex gap-2 mt-auto">

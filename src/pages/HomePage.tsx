@@ -56,7 +56,8 @@ const HomePage: React.FC = () => {
           organizerPhone: event.organizer_phone,
           registrationUrl: event.rsvp_url,
           createdAt: event.created_at,
-          cityId: event.city_id
+          cityId: event.city_id,
+          sponsors: event.sponsors || []
         }));
         
         setEvents(transformedEvents);

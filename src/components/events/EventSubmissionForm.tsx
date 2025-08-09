@@ -1,9 +1,133 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback, memo } from 'react';
 import type { EventType } from '../../types';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { supabase, findOrCreateVenue, incrementCommunityEventCount, incrementVenueEventCount } from '../../utils/supabase';
 import { useLocation } from '../../contexts/LocationContext';
+import { CheckCircle, XCircle, AlertCircle, Loader2 } from 'lucide-react';
+
+// Memoized FormField component to prevent unnecessary re-renders and focus loss
+const FormField = memo(({ 
+  name, 
+  label, 
+  type = 'text', 
+  required = false, 
+  placeholder = '', 
+  pattern = undefined,
+  title = undefined,
+  min = undefined,
+  max = undefined,
+  rows = undefined,
+  maxLength = undefined,
+  children = undefined,
+  value,
+  onChange,
+  onBlur,
+  fieldErrors,
+  fieldTouched,
+  formData
+}: {
+  name: string;
+  label: string;
+  type?: string;
+  required?: boolean;
+  placeholder?: string;
+  pattern?: string;
+  title?: string;
+  min?: number;
+  max?: number;
+  rows?: number;
+  maxLength?: number;
+  children?: React.ReactNode;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
+  onBlur: (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  fieldErrors: Record<string, string>;
+  fieldTouched: Record<string, boolean>;
+  formData: any;
+}) => {
+  const hasError = fieldErrors[name] && fieldTouched[name];
+  const isValid = fieldTouched[name] && !fieldErrors[name] && formData[name];
+  
+  return (
+    <div className="space-y-2">
+      <label htmlFor={name} className="form-label flex items-center gap-2">
+        {label}
+        {required && <span className="text-red-500">*</span>}
+        {isValid && <CheckCircle className="h-4 w-4 text-green-500" />}
+      </label>
+      
+      {!children ? (
+        type === 'textarea' ? (
+          <textarea
+            id={name}
+            name={name}
+            required={required}
+            rows={rows}
+            maxLength={maxLength}
+            value={value}
+            onChange={onChange}
+            onBlur={onBlur}
+            className={`form-input rounded-2xl px-6 py-4 text-lg focus:ring-yellow-400 focus:border-yellow-400 shadow-sm resize-none w-full transition-all duration-200 ${
+              hasError 
+                ? 'border-red-500 focus:ring-red-400 focus:border-red-400' 
+                : isValid 
+                  ? 'border-green-500 focus:ring-green-400 focus:border-green-400'
+                  : 'border-gray-300'
+            }`}
+            placeholder={placeholder}
+            style={{ fontFamily: 'Urbanist, Inter, Space Grotesk, Arial, sans-serif' }}
+            data-error={hasError ? 'true' : 'false'}
+            aria-invalid={hasError}
+            aria-describedby={hasError ? `${name}-error` : undefined}
+          />
+        ) : (
+          <input
+            type={type}
+            id={name}
+            name={name}
+            required={required}
+            value={value}
+            onChange={onChange}
+            onBlur={onBlur}
+            className={`form-input rounded-full px-6 py-3 text-lg focus:ring-yellow-400 focus:border-yellow-400 shadow-sm transition-all duration-200 ${
+              hasError 
+                ? 'border-red-500 focus:ring-red-400 focus:border-red-400' 
+                : isValid 
+                  ? 'border-green-500 focus:ring-green-400 focus:border-green-400'
+                  : 'border-gray-300'
+            }`}
+            placeholder={placeholder}
+            pattern={pattern}
+            title={title}
+            min={min}
+            max={max}
+            style={{ fontFamily: 'Urbanist, Inter, Space Grotesk, Arial, sans-serif' }}
+            data-error={hasError ? 'true' : 'false'}
+            aria-invalid={hasError}
+            aria-describedby={hasError ? `${name}-error` : undefined}
+          />
+        )
+      ) : (
+        children
+      )}
+      
+      {hasError && (
+        <div className="flex items-center gap-2 text-red-600 text-sm" id={`${name}-error`} role="alert">
+          <XCircle className="h-4 w-4 flex-shrink-0" />
+          <span>{fieldErrors[name]}</span>
+        </div>
+      )}
+      
+      {isValid && (
+        <div className="flex items-center gap-2 text-green-600 text-sm">
+          <CheckCircle className="h-4 w-4 text-green-500" />
+          <span>Looks good!</span>
+        </div>
+      )}
+    </div>
+  );
+});
 
 const EventSubmissionForm: React.FC = () => {
   const { selectedCity } = useLocation();
@@ -42,11 +166,196 @@ const EventSubmissionForm: React.FC = () => {
     }>,
   });
   
+  // Enhanced form validation state
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [fieldTouched, setFieldTouched] = useState<Record<string, boolean>>({});
+  const [isValidating, setIsValidating] = useState(false);
+  
+  // Calculate form completion percentage - optimized to prevent focus loss
+  useEffect(() => {
+    // Count basic validation rule fields - consider filled fields as complete even if not touched
+    const basicCompletedFields = Object.keys(validationRules).filter(field => {
+      const value = formData[field as keyof typeof formData];
+      const hasError = fieldErrors[field];
+      const isEmpty = !value || value.toString().trim() === '';
+      
+      // Field is complete if it has a value and no errors
+      return !isEmpty && !hasError;
+    }).length;
+    
+    // Count additional required fields
+    let additionalCompletedFields = 0;
+    const totalAdditionalFields = 5; // banner, communityLogo, proofOfExistence, socialLinks, venue
+    
+    // Check banner
+    if (formData.banner) additionalCompletedFields++;
+    
+    // Check community logo
+    if (formData.communityLogo) additionalCompletedFields++;
+    
+    // Check proof of existence
+    if (formData.proofOfExistence) additionalCompletedFields++;
+    
+    // Check social links (at least one non-empty link)
+    if (formData.socialLinks && formData.socialLinks.length > 0 && formData.socialLinks[0].trim() !== '') {
+      additionalCompletedFields++;
+    }
+    
+    // Check venue (required for offline events)
+    if (formData.isOnline || (formData.venue && formData.venue.trim() !== '')) {
+      additionalCompletedFields++;
+    }
+    
+    const totalCompletedFields = basicCompletedFields + additionalCompletedFields;
+    const totalFields = Object.keys(validationRules).length + totalAdditionalFields;
+    
+    // Announce progress to screen readers
+    if (totalCompletedFields > 0 && totalCompletedFields <= totalFields) {
+      const progressPercentage = Math.round((totalCompletedFields / totalFields) * 100);
+      const progressMessage = `Form progress: ${progressPercentage}% complete, ${totalCompletedFields} of ${totalFields} fields filled`;
+      
+      // Create a live region for screen readers
+      const liveRegion = document.getElementById('form-progress-live');
+      if (liveRegion) {
+        liveRegion.textContent = progressMessage;
+      }
+    }
+  }, [fieldTouched, fieldErrors, formData]); // Added formData back for accurate progress calculation
+  
   const eventTypes: EventType[] = ['Hackathon', 'Workshop', 'Meetup', 'Talk', 'Conference', 'Other'];
+  
+  // Comprehensive validation rules
+  const validationRules = {
+    title: { required: true, minLength: 5, maxLength: 100 },
+    description: { required: true, minLength: 20, maxLength: 500 },
+    date: { required: true },
+    endDate: { required: true },
+    organizerName: { required: true, minLength: 2, maxLength: 50 },
+    organizerEmail: { required: true, pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ },
+    organizerPhone: { required: true, pattern: /^[\+]?[1-9][\d]{0,15}$/ },
+    eventUrl: { required: true, pattern: /^https?:\/\/.+/ },
+    communityName: { required: true, minLength: 2, maxLength: 100 },
+    communityWebsite: { required: true, pattern: /^https?:\/\/.+/ },
+    communitySize: { required: true, min: 1, max: 1000000 },
+    yearFounded: { required: true, min: 1900, max: new Date().getFullYear() }
+  };
+  
+  // Validation functions
+  const validateField = (name: string, value: any): string | null => {
+    const rules = validationRules[name as keyof typeof validationRules];
+    if (!rules) return null;
+    
+    if (rules.required && (!value || value.toString().trim() === '')) {
+      return `${name.charAt(0).toUpperCase() + name.slice(1)} is required`;
+    }
+    
+    if (value && rules.minLength && value.toString().length < rules.minLength) {
+      return `${name.charAt(0).toUpperCase() + name.slice(1)} must be at least ${rules.minLength} characters`;
+    }
+    
+    if (value && rules.maxLength && value.toString().length > rules.maxLength) {
+      return `${name.charAt(0).toUpperCase() + name.slice(1)} must be less than ${rules.maxLength} characters`;
+    }
+    
+    if (value && rules.min && Number(value) < rules.min) {
+      return `${name.charAt(0).toUpperCase() + name.slice(1)} must be at least ${rules.min}`;
+    }
+    
+    if (value && rules.max && Number(value) > rules.max) {
+      return `${name.charAt(0).toUpperCase() + name.slice(1)} must be less than ${rules.max}`;
+    }
+    
+    if (value && rules.pattern && !rules.pattern.test(value)) {
+      return `${name.charAt(0).toUpperCase() + name.slice(1)} format is invalid`;
+    }
+    
+    return null;
+  };
+  
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {};
+    
+    // Validate all fields with rules
+    Object.keys(validationRules).forEach(fieldName => {
+      const error = validateField(fieldName, formData[fieldName as keyof typeof formData]);
+      if (error) {
+        errors[fieldName] = error;
+      }
+    });
+    
+    // Custom validations
+    if (!formData.banner) {
+      errors.banner = 'Event banner is required';
+    }
+    
+    if (!formData.communityLogo) {
+      errors.communityLogo = 'Community logo is required';
+    }
+    
+    if (!formData.proofOfExistence) {
+      errors.proofOfExistence = 'Proof of existence is required';
+    }
+    
+    if (formData.socialLinks.length === 0 || formData.socialLinks[0] === '') {
+      errors.socialLinks = 'At least one social media link is required';
+    }
+    
+    if (formData.date && formData.endDate && new Date(formData.date) >= new Date(formData.endDate)) {
+      errors.endDate = 'End date must be after start date';
+    }
+    
+    if (!formData.isOnline && !formData.venue) {
+      errors.venue = 'Venue is required for offline events';
+    }
+    
+    setFieldErrors(errors);
+    
+    if (Object.keys(errors).length > 0) {
+      // Scroll to first error
+      const firstErrorField = Object.keys(errors)[0];
+      const element = document.getElementById(firstErrorField);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        element.focus();
+      }
+      return false;
+    }
+    
+    return true;
+  };
+  
+
+  
+  // Update form progress when fields change - optimized to prevent focus loss
+  useEffect(() => {
+    const completedFields = Object.keys(validationRules).filter(field => 
+      fieldTouched[field] && !fieldErrors[field] && formData[field as keyof typeof formData]
+    ).length;
+    
+    const progress = (completedFields / Object.keys(validationRules).length) * 100;
+    
+    // Update live region for screen readers
+    const liveRegion = document.getElementById('form-progress-live');
+    if (liveRegion) {
+      liveRegion.textContent = `Form progress: ${Math.round(progress)}% complete, ${completedFields} of ${Object.keys(validationRules).length} fields filled`;
+    }
+  }, [fieldTouched, fieldErrors]); // Removed formData dependency to prevent excessive re-renders
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    
+    // Mark field as touched and validate
+    setFieldTouched(prev => ({ ...prev, [name]: true }));
+    const error = validateField(name, value);
+    setFieldErrors(prev => ({ ...prev, [name]: error || '' }));
+  };
+  
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFieldTouched(prev => ({ ...prev, [name]: true }));
+    const error = validateField(name, value);
+    setFieldErrors(prev => ({ ...prev, [name]: error || '' }));
   };
   
   const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -62,6 +371,9 @@ const EventSubmissionForm: React.FC = () => {
       const previewUrl = URL.createObjectURL(file);
       setBannerPreview(previewUrl);
       setFormData((prev) => ({ ...prev, banner: file }));
+      
+      // Mark banner field as touched when file is selected
+      setFieldTouched(prev => ({ ...prev, banner: true }));
 
       
       const img = new Image();
@@ -98,6 +410,9 @@ const EventSubmissionForm: React.FC = () => {
       const previewUrl = URL.createObjectURL(file);
       setLogoPreview(previewUrl);
       setFormData((prev) => ({ ...prev, communityLogo: file }));
+      
+      // Mark community logo field as touched when file is selected
+      setFieldTouched(prev => ({ ...prev, communityLogo: true }));
 
       
       const img = new Image();
@@ -128,16 +443,30 @@ const EventSubmissionForm: React.FC = () => {
       [name]: checked,
       venue: checked ? 'Online event' : prev.venue 
     }));
+    
+    // Mark venue field as touched when online checkbox changes
+    if (name === 'isOnline') {
+      setFieldTouched(prev => ({ ...prev, venue: true }));
+    }
   };
   
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    
+    // Validate form before submission
+    if (!validateForm()) {
+      setFormError('Please fix the errors above before submitting.');
+      return;
+    }
+    
     setIsSubmitting(true);
     setFormError('');
+    setIsValidating(true);
 
     if (!selectedCity) {
       setFormError('Please select your city before submitting the event.');
       setIsSubmitting(false);
+      setIsValidating(false);
       return;
     }
 
@@ -157,6 +486,8 @@ const EventSubmissionForm: React.FC = () => {
         const fileExtension = file.name.split('.').pop();
         const fileName = `${folder}${Date.now()}-${sanitizedFileName}`;
         console.log(`Uploading file: ${fileName} to bucket: ${bucket}`);
+        
+
         
         const { data, error } = await supabase.storage
           .from(bucket)
@@ -372,8 +703,14 @@ const EventSubmissionForm: React.FC = () => {
         for (const sponsor of formData.sponsors) {
           if (sponsor.name && sponsor.banner) {
             try {
-              // Upload sponsor banner
-              const sponsorBannerUrl = await uploadFile(sponsor.banner, 'sponsor-banners', 'sponsors/');
+              // Upload sponsor banner - try sponsor-banners first, fallback to event-banners
+              let sponsorBannerUrl;
+              try {
+                sponsorBannerUrl = await uploadFile(sponsor.banner, 'sponsor-banners', 'sponsors/');
+              } catch (sponsorBucketError) {
+                // Fallback to event-banners bucket if sponsor-banners fails
+                sponsorBannerUrl = await uploadFile(sponsor.banner, 'event-banners', 'sponsors/');
+              }
               
               // Insert sponsor record
               const { error: sponsorError } = await supabase
@@ -435,18 +772,24 @@ const EventSubmissionForm: React.FC = () => {
       setFormError(error instanceof Error ? error.message : 'An unexpected error occurred. Please try again.');
     } finally {
       setIsSubmitting(false);
+      setIsValidating(false);
     }
   };
 
   const handlePreview = (e: React.FormEvent) => {
     e.preventDefault();
     setFormError('');
+    setIsValidating(true);
     
-    if (!formData.title || !formData.description || !formData.banner || !formData.eventUrl || !formData.organizerName || !formData.organizerEmail || !formData.communityName || !formData.communityLogo) {
-      setFormError('Please fill in all required fields and upload a banner and community logo.');
+    // Validate form before showing preview
+    if (!validateForm()) {
+      setFormError('Please fix the errors above before previewing.');
+      setIsValidating(false);
       return;
     }
+    
     setShowPreview(true);
+    setIsValidating(false);
   };
 
   const handleEdit = () => {
@@ -472,7 +815,10 @@ const EventSubmissionForm: React.FC = () => {
     return (
       <div className="text-center py-12">
         <div className="bg-green-50 border border-green-200 rounded-lg p-6 max-w-lg mx-auto">
-          <h2 className="text-2xl font-bold text-green-800 mb-4">Thank You for Submitting Your Event!</h2>
+          <div className="flex items-center justify-center mb-4">
+            <CheckCircle className="h-12 w-12 text-green-500 mr-3" />
+            <h2 className="text-2xl font-bold text-green-800">Thank You for Submitting Your Event!</h2>
+          </div>
           <p className="text-green-700 mb-6">
             Your event has been submitted for review. Our team will verify the details and get back to you soon.
             We'll contact you at {formData.organizerEmail} once the review is complete.
@@ -542,48 +888,200 @@ const EventSubmissionForm: React.FC = () => {
   }
   
   return (
-    <form onSubmit={handlePreview} className="space-y-6">
+    <form 
+      onSubmit={handlePreview} 
+      className="space-y-6"
+      aria-label="Event submission form"
+      noValidate
+    >
+      {/* Enhanced error display */}
       {formError && (
-        <div className="bg-error-50 border border-error-500 text-error-700 px-4 py-3 rounded">
-          {formError}
+        <div className="bg-red-50 border border-red-500 text-red-700 px-4 py-3 rounded-lg flex items-center gap-3" role="alert">
+          <AlertCircle className="h-5 w-5 flex-shrink-0" />
+          <span>{formError}</span>
+        </div>
+      )}
+
+      {/* Form progress indicator */}
+      <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-medium text-gray-700">Form Progress</span>
+          <span className="text-sm text-gray-500">
+            {(() => {
+              // Count basic validation rule fields - consider filled fields as complete even if not touched
+              const basicCompletedFields = Object.keys(validationRules).filter(field => {
+                const value = formData[field as keyof typeof formData];
+                const hasError = fieldErrors[field];
+                const isEmpty = !value || value.toString().trim() === '';
+                
+                // Field is complete if it has a value and no errors
+                return !isEmpty && !hasError;
+              }).length;
+              
+              // Count additional required fields
+              let additionalCompletedFields = 0;
+              const totalAdditionalFields = 5; // banner, communityLogo, proofOfExistence, socialLinks, venue
+              
+              if (formData.banner) additionalCompletedFields++;
+              if (formData.communityLogo) additionalCompletedFields++;
+              if (formData.proofOfExistence) additionalCompletedFields++;
+              if (formData.socialLinks && formData.socialLinks.length > 0 && formData.socialLinks[0].trim() !== '') {
+                additionalCompletedFields++;
+              }
+              if (formData.isOnline || (formData.venue && formData.venue.trim() !== '')) {
+                additionalCompletedFields++;
+              }
+              
+              const totalCompletedFields = basicCompletedFields + additionalCompletedFields;
+              const totalFields = Object.keys(validationRules).length + totalAdditionalFields;
+              
+              return `${totalCompletedFields} / ${totalFields} fields completed`;
+            })()}
+          </span>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-2">
+          <div 
+            className="bg-yellow-400 h-2 rounded-full transition-all duration-500 ease-out"
+            style={{ 
+              width: `${(() => {
+                // Count basic validation rule fields - consider filled fields as complete even if not touched
+                const basicCompletedFields = Object.keys(validationRules).filter(field => {
+                  const value = formData[field as keyof typeof formData];
+                  const hasError = fieldErrors[field];
+                  const isEmpty = !value || value.toString().trim() === '';
+                  
+                  // Field is complete if it has a value and no errors
+                  return !isEmpty && !hasError;
+                }).length;
+                
+                // Count additional required fields
+                let additionalCompletedFields = 0;
+                const totalAdditionalFields = 5; // banner, communityLogo, proofOfExistence, socialLinks, venue
+                
+                if (formData.banner) additionalCompletedFields++;
+                if (formData.communityLogo) additionalCompletedFields++;
+                if (formData.proofOfExistence) additionalCompletedFields++;
+                if (formData.socialLinks && formData.socialLinks.length > 0 && formData.socialLinks[0].trim() !== '') {
+                  additionalCompletedFields++;
+                }
+                if (formData.isOnline || (formData.venue && formData.venue.trim() !== '')) {
+                  additionalCompletedFields++;
+                }
+                
+                const totalCompletedFields = basicCompletedFields + additionalCompletedFields;
+                const totalFields = Object.keys(validationRules).length + totalAdditionalFields;
+                
+                return (totalCompletedFields / totalFields) * 100;
+              })()}%` 
+            }}
+          ></div>
+        </div>
+        {/* Live region for screen readers */}
+        <div 
+          id="form-progress-live" 
+          className="sr-only" 
+          aria-live="polite" 
+          aria-atomic="true"
+        >
+          Form progress: 0% complete, 0 of {Object.keys(validationRules).length + 5} fields filled
+        </div>
+        
+        {/* Missing fields summary */}
+        {(() => {
+          const missingFields: string[] = [];
+          
+          // Check basic validation rule fields - only mark as missing if not touched OR has errors OR is empty
+          Object.keys(validationRules).forEach(field => {
+            const value = formData[field as keyof typeof formData];
+            const hasError = fieldErrors[field];
+            const isEmpty = !value || value.toString().trim() === '';
+            
+            // Only mark as missing if field is touched AND (has error OR is empty)
+            if (fieldTouched[field] && (hasError || isEmpty)) {
+              missingFields.push(field);
+            }
+          });
+          
+          // Check additional required fields
+          if (!formData.banner) missingFields.push('Event Banner');
+          if (!formData.communityLogo) missingFields.push('Community Logo');
+          if (!formData.proofOfExistence) missingFields.push('Proof of Existence');
+          if (!formData.socialLinks || formData.socialLinks.length === 0 || formData.socialLinks[0].trim() === '') {
+            missingFields.push('Social Media Links');
+          }
+          if (!formData.isOnline && (!formData.venue || formData.venue.trim() === '')) {
+            missingFields.push('Venue (for offline events)');
+          }
+          
+          if (missingFields.length > 0) {
+            return (
+              <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-sm font-medium text-yellow-800 mb-2">Missing Required Fields:</p>
+                <div className="flex flex-wrap gap-2">
+                  {missingFields.slice(0, 5).map((field, index) => (
+                    <span key={index} className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full">
+                      {field}
+                    </span>
+                  ))}
+                  {missingFields.length > 5 && (
+                    <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full">
+                      +{missingFields.length - 5} more
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          }
+          return null;
+        })()}
+      </div>
+
+      {/* Validation summary for screen readers */}
+      {Object.keys(fieldErrors).length > 0 && (
+        <div className="sr-only" aria-live="assertive" aria-atomic="true">
+          Form has {Object.keys(fieldErrors).length} validation errors. Please review and fix the highlighted fields.
         </div>
       )}
 
       <div className="bg-white p-6 rounded-3xl shadow-md mb-8" style={{ fontFamily: 'Urbanist, Inter, Space Grotesk, Arial, sans-serif' }}>
         <h3 className="text-2xl font-extrabold mb-6 text-black">Event Details</h3>
         <div className="space-y-6">
-          <div>
-            <label htmlFor="title" className="form-label">Event Title*</label>
-            <input
-              type="text"
-              id="title"
-              name="title"
+          <FormField
+            name="title"
+            label="Event Title"
+            required
+            placeholder="Enter the event name (e.g., Tech Meetup)"
+            value={formData.title}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            fieldErrors={fieldErrors}
+            fieldTouched={fieldTouched}
+            formData={formData}
+          />
+          <div className="relative">
+            <FormField
+              name="description"
+              label="Description"
+              type="textarea"
               required
-              value={formData.title}
+              rows={5}
+              maxLength={500}
+              placeholder="Describe your event in 5-6 lines. Include key highlights, what attendees will learn or experience, and any special features. Keep it engaging and informative!"
+              value={formData.description}
               onChange={handleChange}
-              className="form-input rounded-full px-6 py-3 text-lg focus:ring-yellow-400 focus:border-yellow-400 shadow-sm"
-              placeholder="Enter the event name (e.g., Tech Meetup)"
-              style={{ fontFamily: 'Urbanist, Inter, Space Grotesk, Arial, sans-serif' }}
+              onBlur={handleBlur}
+              fieldErrors={fieldErrors}
+              fieldTouched={fieldTouched}
+              formData={formData}
             />
-          </div>
-          <div>
-            <label htmlFor="description" className="form-label">Description*</label>
-            <div className="relative">
-              <textarea
-                id="description"
-                name="description"
-                required
-                rows={5}
-                maxLength={500}
-                value={formData.description}
-                onChange={handleChange}
-                className="form-input rounded-2xl px-6 py-4 text-lg focus:ring-yellow-400 focus:border-yellow-400 shadow-sm resize-none w-full"
-                placeholder="Describe your event in 5-6 lines. Include key highlights, what attendees will learn or experience, and any special features. Keep it engaging and informative!"
-                style={{ fontFamily: 'Urbanist, Inter, Space Grotesk, Arial, sans-serif' }}
-              />
-              <div className="absolute bottom-3 right-3 text-sm text-gray-500 bg-white/90 px-2 py-1 rounded-lg">
-                {formData.description.length}/500
-              </div>
+            <div className={`absolute bottom-3 right-3 text-sm px-2 py-1 rounded-lg transition-colors duration-200 ${
+              formData.description.length >= 450 
+                ? formData.description.length >= 500 
+                  ? 'text-red-600 bg-red-100' 
+                  : 'text-yellow-600 bg-yellow-100'
+                : 'text-gray-500 bg-white/90'
+            }`}>
+              {formData.description.length}/500
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -649,6 +1147,7 @@ const EventSubmissionForm: React.FC = () => {
                     required
                     accept="image/jpeg,image/png,image/webp"
                     onChange={handleBannerChange}
+                    onBlur={handleBlur}
                     className="hidden"
                   />
                 </label>
@@ -657,6 +1156,9 @@ const EventSubmissionForm: React.FC = () => {
                     <span className="text-green-600">✅</span>
                     <span className="text-gray-700 text-sm font-medium truncate max-w-xs" style={{ fontFamily: 'Urbanist, Inter, Space Grotesk, Arial, sans-serif' }}>{formData.banner.name}</span>
                   </div>
+                )}
+                {fieldTouched.banner && fieldErrors.banner && (
+                  <p className="text-sm text-red-500 mt-1">{fieldErrors.banner}</p>
                 )}
               </div>
               
@@ -702,8 +1204,15 @@ const EventSubmissionForm: React.FC = () => {
                 </div>
               )}
             </div>
-            <div>
-              <label htmlFor="eventUrl" className="form-label">Event URL*</label>
+            <div className="space-y-2">
+              <label htmlFor="eventUrl" className="form-label flex items-center gap-2">
+                Event URL
+                <span className="text-red-500">*</span>
+                {fieldTouched.eventUrl && !fieldErrors.eventUrl && formData.eventUrl && (
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                )}
+              </label>
+              
               <input
                 type="url"
                 id="eventUrl"
@@ -711,17 +1220,42 @@ const EventSubmissionForm: React.FC = () => {
                 required
                 value={formData.eventUrl}
                 onChange={handleChange}
-                className="form-input rounded-full px-6 py-3 text-lg focus:ring-yellow-400 focus:border-yellow-400 shadow-sm"
+                onBlur={handleBlur}
                 placeholder="Paste the registration or event info link (e.g., https://example.com/event)"
-                style={{ fontFamily: 'Urbanist, Inter, Space Grotesk, Arial, sans-serif' }}
                 pattern="https?://.+"
                 title="Please enter a valid URL starting with http:// or https://"
+                className={`form-input rounded-full px-6 py-3 text-lg focus:ring-yellow-400 focus:border-yellow-400 shadow-sm transition-all duration-200 ${
+                  fieldErrors.eventUrl && fieldTouched.eventUrl
+                    ? 'border-red-500 focus:ring-red-400 focus:border-red-400' 
+                    : fieldTouched.eventUrl && !fieldErrors.eventUrl && formData.eventUrl
+                      ? 'border-green-500 focus:ring-green-400 focus:border-green-400'
+                      : 'border-gray-300'
+                }`}
+                style={{ fontFamily: 'Urbanist, Inter, Space Grotesk, Arial, sans-serif' }}
+                data-error={fieldErrors.eventUrl && fieldTouched.eventUrl ? 'true' : 'false'}
+                aria-invalid={fieldErrors.eventUrl && fieldTouched.eventUrl}
+                aria-describedby={fieldErrors.eventUrl && fieldTouched.eventUrl ? 'eventUrl-error' : undefined}
               />
+              
               <p className="mt-2 text-sm text-gray-600 bg-blue-50 border border-blue-200 rounded-lg p-3">
                 <span className="font-medium text-blue-800">💡 Important:</span> This link will be used to redirect interested attendees to your RSVP/registration page. 
                 Loopin is a discovery platform for visibility - we don't handle event registration directly. 
                 Make sure this link goes to your event's registration form, ticket booking page, or detailed event information.
               </p>
+              
+              {fieldErrors.eventUrl && fieldTouched.eventUrl && (
+                <div className="flex items-center gap-2 text-red-600 text-sm" id="eventUrl-error" role="alert">
+                  <XCircle className="h-4 w-4 flex-shrink-0" />
+                  <span>{fieldErrors.eventUrl}</span>
+                </div>
+              )}
+              
+              {fieldTouched.eventUrl && !fieldErrors.eventUrl && formData.eventUrl && (
+                <div className="flex items-center gap-2 text-green-600 text-sm">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span>Looks good!</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -734,7 +1268,13 @@ const EventSubmissionForm: React.FC = () => {
             <label htmlFor="date" className="form-label">Event Date & Time*</label>
             <DatePicker
               selected={formData.date ? new Date(formData.date) : null}
-              onChange={dateObj => setFormData(prev => ({ ...prev, date: dateObj ? dateObj.toISOString() : '' }))}
+              onChange={dateObj => {
+                setFormData(prev => ({ ...prev, date: dateObj ? dateObj.toISOString() : '' }));
+                // Mark field as touched when date is selected
+                if (dateObj) {
+                  setFieldTouched(prev => ({ ...prev, date: true }));
+                }
+              }}
               showTimeSelect
               timeFormat="HH:mm"
               timeIntervals={15}
@@ -742,13 +1282,23 @@ const EventSubmissionForm: React.FC = () => {
               placeholderText="Select event start date & time"
               required
               customInput={<CustomDateTimeInput placeholder="Select event start date & time" />}
+              onBlur={() => setFieldTouched(prev => ({ ...prev, date: true }))}
             />
+            {fieldTouched.date && fieldErrors.date && (
+              <p className="text-sm text-red-500 mt-1">{fieldErrors.date}</p>
+            )}
           </div>
           <div>
             <label htmlFor="endDate" className="form-label">End Date & Time*</label>
             <DatePicker
               selected={formData.endDate ? new Date(formData.endDate) : null}
-              onChange={dateObj => setFormData(prev => ({ ...prev, endDate: dateObj ? dateObj.toISOString() : '' }))}
+              onChange={dateObj => {
+                setFormData(prev => ({ ...prev, endDate: dateObj ? dateObj.toISOString() : '' }));
+                // Mark field as touched when date is selected
+                if (dateObj) {
+                  setFieldTouched(prev => ({ ...prev, endDate: true }));
+                }
+              }}
               showTimeSelect
               timeFormat="HH:mm"
               timeIntervals={15}
@@ -756,8 +1306,12 @@ const EventSubmissionForm: React.FC = () => {
               placeholderText="Select event end date & time"
               required
               customInput={<CustomDateTimeInput placeholder="Select event end date & time" />}
+              onBlur={() => setFieldTouched(prev => ({ ...prev, endDate: true }))}
             />
-            <p className="mt-1 text-sm text-gray-500">When does your event end?</p>
+            <p className="text-sm text-gray-500">When does your event end?</p>
+            {fieldTouched.endDate && fieldErrors.endDate && (
+              <p className="text-sm text-red-500 mt-1">{fieldErrors.endDate}</p>
+            )}
           </div>
         </div>
       </div>
@@ -765,14 +1319,24 @@ const EventSubmissionForm: React.FC = () => {
       <div className="bg-gray-50 p-4 rounded-lg mb-6">
         <h3 className="text-lg font-medium text-gray-900 mb-2">Event Type*</h3>
         <div className="space-y-4">
-          <div>
-            <label htmlFor="eventType" className="form-label">Event Type*</label>
+          <FormField
+            name="eventType"
+            label="Event Type"
+            required
+            value={formData.eventType}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            fieldErrors={fieldErrors}
+            fieldTouched={fieldTouched}
+            formData={formData}
+          >
             <select
               id="eventType"
               name="eventType"
               required
               value={formData.eventType}
               onChange={handleChange}
+              onBlur={handleBlur}
               className="form-input"
             >
               {eventTypes.map((type) => (
@@ -781,7 +1345,7 @@ const EventSubmissionForm: React.FC = () => {
                 </option>
               ))}
             </select>
-          </div>
+          </FormField>
           
           <div>
             <div className="flex items-start">
@@ -792,6 +1356,7 @@ const EventSubmissionForm: React.FC = () => {
                   type="checkbox"
                   checked={formData.isOnline}
                   onChange={handleCheckboxChange}
+                  onBlur={handleBlur}
                   className="h-4 w-4 text-primary border-gray-300 rounded focus:ring-accent-black"
                 />
               </div>
@@ -801,70 +1366,71 @@ const EventSubmissionForm: React.FC = () => {
                 </label>
               </div>
             </div>
+            {fieldTouched.isOnline && fieldErrors.venue && (
+              <p className="text-sm text-red-500 mt-1">{fieldErrors.venue}</p>
+            )}
           </div>
           
-          <div>
-            <label htmlFor="venue" className="form-label">Venue*</label>
-            <input
-              type="text"
-              id="venue"
-              name="venue"
-              required
-              value={formData.venue}
-              onChange={handleChange}
-              className="form-input"
-              placeholder={formData.isOnline ? "Online event" : "e.g., Innovation Hub"}
-              disabled={formData.isOnline}
-            />
-          </div>
+          <FormField
+            name="venue"
+            label="Venue"
+            required
+            placeholder={formData.isOnline ? "Online event" : "e.g., Innovation Hub"}
+            value={formData.venue}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            fieldErrors={fieldErrors}
+            fieldTouched={fieldTouched}
+            formData={formData}
+          />
+
         </div>
       </div>
 
       <div className="bg-gray-50 p-4 rounded-lg mb-6">
         <h3 className="text-lg font-medium text-gray-900 mb-2">Organizer Information</h3>
         <div className="space-y-4">
-          <div>
-            <label htmlFor="organizerName" className="form-label">Your Name*</label>
-            <input
-              type="text"
-              id="organizerName"
-              name="organizerName"
-              required
-              value={formData.organizerName}
-              onChange={handleChange}
-              className="form-input"
-              placeholder="John Doe"
-            />
-          </div>
+          <FormField
+            name="organizerName"
+            label="Your Name"
+            required
+            placeholder="John Doe"
+            value={formData.organizerName}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            fieldErrors={fieldErrors}
+            fieldTouched={fieldTouched}
+            formData={formData}
+          />
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label htmlFor="organizerEmail" className="form-label">Email Address*</label>
-              <input
-                type="email"
-                id="organizerEmail"
-                name="organizerEmail"
-                required
-                value={formData.organizerEmail}
-                onChange={handleChange}
-                className="form-input"
-                placeholder="john@example.com"
-              />
-            </div>
+            <FormField
+              name="organizerEmail"
+              label="Email Address"
+              type="email"
+              required
+              placeholder="john@example.com"
+              value={formData.organizerEmail}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              fieldErrors={fieldErrors}
+              fieldTouched={fieldTouched}
+              formData={formData}
+            />
             
-            <div>
-              <label htmlFor="organizerPhone" className="form-label">Phone Number*</label>
-              <input
-                type="tel"
-                id="organizerPhone"
-                name="organizerPhone"
-                required
-                value={formData.organizerPhone}
-                onChange={handleChange}
-                className="form-input"
-                placeholder="+91 98765 43210"
-              />
-            </div>
+            <FormField
+              name="organizerPhone"
+              label="Phone Number"
+              type="tel"
+              required
+              placeholder="+91 98765 43210"
+              value={formData.organizerPhone}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              fieldErrors={fieldErrors}
+              fieldTouched={fieldTouched}
+              formData={formData}
+            />
           </div>
         </div>
       </div>
@@ -872,19 +1438,18 @@ const EventSubmissionForm: React.FC = () => {
       <div className="bg-gray-50 p-4 rounded-lg mb-6">
         <h3 className="text-lg font-medium text-gray-900 mb-2">Community Information</h3>
         <div className="space-y-4">
-          <div>
-            <label htmlFor="communityName" className="form-label">Community/Organization Name*</label>
-            <input
-              type="text"
-              id="communityName"
-              name="communityName"
-              required
-              value={formData.communityName}
-              onChange={handleChange}
-              className="form-input"
-              placeholder="e.g., Tech Community"
-            />
-          </div>
+          <FormField
+            name="communityName"
+            label="Community/Organization Name"
+            required
+            placeholder="e.g., Tech Community"
+            value={formData.communityName}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            fieldErrors={fieldErrors}
+            fieldTouched={fieldTouched}
+            formData={formData}
+          />
           <div>
             <label htmlFor="communityLogo" className="form-label">Community Logo*</label>
             
@@ -947,6 +1512,7 @@ const EventSubmissionForm: React.FC = () => {
                   required
                   accept="image/jpeg,image/png,image/webp"
                   onChange={handleLogoChange}
+                  onBlur={handleBlur}
                   className="hidden"
                 />
               </label>
@@ -955,6 +1521,9 @@ const EventSubmissionForm: React.FC = () => {
                   <span className="text-green-600">✅</span>
                   <span className="text-gray-700 text-sm font-medium truncate max-w-xs" style={{ fontFamily: 'Urbanist, Inter, Space Grotesk, Arial, sans-serif' }}>{formData.communityLogo.name}</span>
                 </div>
+              )}
+              {fieldTouched.communityLogo && fieldErrors.communityLogo && (
+                <p className="text-sm text-red-500 mt-1">{fieldErrors.communityLogo}</p>
               )}
             </div>
             
@@ -984,21 +1553,21 @@ const EventSubmissionForm: React.FC = () => {
               </div>
             )}
           </div>
-          <div>
-            <label htmlFor="communityWebsite" className="form-label">Community Website*</label>
-            <input
-              type="url"
-              id="communityWebsite"
-              name="communityWebsite"
-              required
-              value={formData.communityWebsite || ''}
-              onChange={handleChange}
-              className="form-input"
-              placeholder="https://example.com/community"
-              pattern="https?://.+"
-              title="Please enter a valid URL starting with http:// or https://"
-            />
-          </div>
+          <FormField
+            name="communityWebsite"
+            label="Community Website"
+            type="url"
+            required
+            placeholder="https://example.com/community"
+            pattern="https?://.+"
+            title="Please enter a valid URL starting with http:// or https://"
+            value={formData.communityWebsite}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            fieldErrors={fieldErrors}
+            fieldTouched={fieldTouched}
+            formData={formData}
+          />
           <div>
             <label className="form-label">Social Media Links* (at least one)</label>
             {(formData.socialLinks || ['']).map((link: string, idx: number) => (
@@ -1013,6 +1582,7 @@ const EventSubmissionForm: React.FC = () => {
                     links[idx] = e.target.value;
                     setFormData(prev => ({ ...prev, socialLinks: links }));
                   }}
+                  onBlur={() => setFieldTouched(prev => ({ ...prev, socialLinks: true }))}
                   className="form-input flex-1"
                   placeholder="https://example.com/social-profile"
                   pattern="https?://.+"
@@ -1028,6 +1598,9 @@ const EventSubmissionForm: React.FC = () => {
               </div>
             ))}
             <button type="button" onClick={() => setFormData(prev => ({ ...prev, socialLinks: [...(prev.socialLinks || ['']), ''] }))} className="btn btn-outline mt-2">Add Social Link</button>
+            {fieldTouched.socialLinks && fieldErrors.socialLinks && (
+              <p className="text-sm text-red-500 mt-1">{fieldErrors.socialLinks}</p>
+            )}
           </div>
           <div>
             <label htmlFor="proofOfExistence" className="form-label">Proof of Community Existence* (screenshot or document)</label>
@@ -1037,40 +1610,50 @@ const EventSubmissionForm: React.FC = () => {
               name="proofOfExistence"
               required
               accept="image/*,application/pdf"
-              onChange={e => setFormData(prev => ({ ...prev, proofOfExistence: e.target.files && e.target.files[0] ? e.target.files[0] : null }))}
+              onChange={e => {
+                setFormData(prev => ({ ...prev, proofOfExistence: e.target.files && e.target.files[0] ? e.target.files[0] : null }));
+                // Mark field as touched when file is selected
+                if (e.target.files && e.target.files[0]) {
+                  setFieldTouched(prev => ({ ...prev, proofOfExistence: true }));
+                }
+              }}
+              onBlur={() => setFieldTouched(prev => ({ ...prev, proofOfExistence: true }))}
               className="form-input"
             />
             <p className="mt-1 text-sm text-gray-500">Upload a screenshot or document that proves your community exists</p>
+            {fieldTouched.proofOfExistence && fieldErrors.proofOfExistence && (
+              <p className="text-sm text-red-500 mt-1">{fieldErrors.proofOfExistence}</p>
+            )}
           </div>
-          <div>
-            <label htmlFor="communitySize" className="form-label">Community Size*</label>
-            <input
-              type="number"
-              id="communitySize"
-              name="communitySize"
-              required
-              min={1}
-              value={formData.communitySize || ''}
-              onChange={handleChange}
-              className="form-input"
-              placeholder="Approximate number of members"
-            />
-          </div>
-          <div>
-            <label htmlFor="yearFounded" className="form-label">Year Founded*</label>
-            <input
-              type="number"
-              id="yearFounded"
-              name="yearFounded"
-              required
-              min={1900}
-              max={new Date().getFullYear()}
-              value={formData.yearFounded || ''}
-              onChange={handleChange}
-              className="form-input"
-              placeholder="e.g., 2018"
-            />
-          </div>
+          <FormField
+            name="communitySize"
+            label="Community Size"
+            type="number"
+            required
+            min={1}
+            placeholder="Approximate number of members"
+            value={formData.communitySize}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            fieldErrors={fieldErrors}
+            fieldTouched={fieldTouched}
+            formData={formData}
+          />
+          <FormField
+            name="yearFounded"
+            label="Year Founded"
+            type="number"
+            required
+            min={1900}
+            max={new Date().getFullYear()}
+            placeholder="e.g., 2018"
+            value={formData.yearFounded}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            fieldErrors={fieldErrors}
+            fieldTouched={fieldTouched}
+            formData={formData}
+          />
           <div>
             <label className="form-label">Previous Events (links to past events or photos)</label>
             {(formData.previousEvents || ['']).map((link: string, idx: number) => (
@@ -1084,6 +1667,7 @@ const EventSubmissionForm: React.FC = () => {
                     links[idx] = e.target.value;
                     setFormData(prev => ({ ...prev, previousEvents: links }));
                   }}
+                  onBlur={handleBlur}
                   className="form-input flex-1"
                   placeholder="https://example.com/previous-event"
                   pattern="https?://.+"
@@ -1145,10 +1729,14 @@ const EventSubmissionForm: React.FC = () => {
                       newSponsors[index].name = e.target.value;
                       setFormData(prev => ({ ...prev, sponsors: newSponsors }));
                     }}
+                    onBlur={handleBlur}
                     className="form-input"
                     placeholder="e.g., TechCorp Solutions"
                     required={formData.sponsors.length > 0}
                   />
+                  {fieldTouched.sponsors && fieldErrors.sponsors && (
+                    <p className="text-sm text-red-500 mt-1">{fieldErrors.sponsors}</p>
+                  )}
                 </div>
                 
                 <div>
@@ -1161,6 +1749,7 @@ const EventSubmissionForm: React.FC = () => {
                       newSponsors[index].website_url = e.target.value;
                       setFormData(prev => ({ ...prev, sponsors: newSponsors }));
                     }}
+                    onBlur={handleBlur}
                     className="form-input"
                     placeholder="https://sponsor-website.com (optional)"
                     pattern="https?://.+"
@@ -1205,6 +1794,7 @@ const EventSubmissionForm: React.FC = () => {
                           setFormError('');
                         }
                       }}
+                      onBlur={handleBlur}
                       className="hidden"
                       required={formData.sponsors.length > 0}
                     />
@@ -1222,13 +1812,15 @@ const EventSubmissionForm: React.FC = () => {
                 
                 {sponsor.banner && (
                   <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                    <p className="text-sm font-medium text-gray-800 mb-2">Preview:</p>
-                    <div className="max-w-xs">
-                      <img
-                        src={URL.createObjectURL(sponsor.banner)}
-                        alt={`${sponsor.name} banner preview`}
-                        className="w-full h-24 object-cover rounded-lg border border-gray-200"
-                      />
+                    <p className="text-sm font-medium text-gray-800 mb-2">Preview (exact live website display):</p>
+                    <div className="w-full">
+                      <div className="relative h-48 sm:h-56 rounded-xl overflow-hidden shadow-lg border-2 border-white/50">
+                        <img
+                          src={URL.createObjectURL(sponsor.banner)}
+                          alt={`${sponsor.name} banner preview`}
+                          className="w-full h-full object-cover transition-transform duration-300"
+                        />
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1253,8 +1845,24 @@ const EventSubmissionForm: React.FC = () => {
       </div>
       
       <div className="flex justify-end gap-4 mt-8">
-        <button type="submit" className="bg-yellow-400 text-black font-bold rounded-full px-8 py-3 shadow hover:bg-yellow-300 transition-colors" disabled={isSubmitting}>
-          Preview
+        <button 
+          type="submit" 
+          className="bg-yellow-400 text-black font-bold rounded-full px-8 py-3 shadow hover:bg-yellow-300 transition-all duration-300 transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none" 
+          disabled={isSubmitting || isValidating}
+        >
+          {isValidating ? (
+            <>
+              <Loader2 className="h-5 w-5 animate-spin inline mr-2" />
+              Validating...
+            </>
+          ) : isSubmitting ? (
+            <>
+              <Loader2 className="h-5 w-5 animate-spin inline mr-2" />
+              Submitting...
+            </>
+          ) : (
+            'Preview'
+          )}
         </button>
       </div>
     </form>

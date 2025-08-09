@@ -138,6 +138,12 @@ export async function getEvents(filters?: FilterOptions) {
         id,
         name,
         state
+      ),
+      sponsors (
+        id,
+        name,
+        banner_url,
+        website_url
       )
     `)
     .eq('status', 'approved')
@@ -168,6 +174,7 @@ export async function getEvents(filters?: FilterOptions) {
     communityName: event.communities.name,
     communityLogo: event.communities.logo,
     cityName: event.cities.name,
+    sponsors: event.sponsors || [],
   }));
 }
 
