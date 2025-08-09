@@ -4,6 +4,11 @@ import { Menu, X, MapPin } from 'lucide-react';
 import { useLocation as useLocationContext } from '../../contexts/LocationContext';
 import { City } from '../../types';
 
+// Helper function to scroll to top
+const scrollToTop = () => {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
 // Memoized navigation items for performance
 const navigationItems = [
   { to: '/', label: 'Events' },
@@ -29,7 +34,10 @@ const NavigationLink = memo(({ to, label, isActive, onClick }: {
         ? 'border-accent-black text-accent-black bg-yellow-50/80 shadow-sm' 
         : 'hover:border-accent-black hover:text-accent-black text-gray-700 hover:bg-yellow-50/50 hover:shadow-md'
     }`}
-    onClick={onClick}
+    onClick={() => {
+      scrollToTop();
+      onClick?.();
+    }}
     aria-current={isActive ? 'page' : undefined}
   >
     <span className="relative">
@@ -57,7 +65,10 @@ const MobileMenuItem = memo(({ to, label, isActive, onClick, index }: {
         : 'text-accent-black hover:border-l-yellow-300 hover:shadow-md'
     } animate-menuItem transform-gpu hover:scale-[1.02]`}
     style={{ animationDelay: `${0.05 * index + 0.1}s` }}
-    onClick={onClick}
+    onClick={() => {
+      scrollToTop();
+      onClick();
+    }}
     aria-current={isActive ? 'page' : undefined}
   >
     <span className="relative">
@@ -160,7 +171,10 @@ const Header: React.FC = () => {
             <Link 
               to="/" 
               className="flex-shrink-0 flex items-center group transform-gpu hover:scale-105 transition-transform duration-300" 
-              onClick={closeMenu}
+              onClick={() => {
+                scrollToTop();
+                closeMenu();
+              }}
             >
               <img 
                 src="/loopin-logo.svg" 
