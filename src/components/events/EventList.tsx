@@ -26,6 +26,13 @@ const EventList: React.FC<EventListProps> = ({ events, loading = false }) => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  // Handle view mode change with smooth transition
+  const handleViewModeChange = (newViewMode: 'grid' | 'list') => {
+    if (newViewMode !== viewMode) {
+      setViewMode(newViewMode);
+    }
+  };
+
   
   const generateEventGradient = (event: Event) => {
     const eventTypeColors = {
@@ -240,42 +247,56 @@ const EventList: React.FC<EventListProps> = ({ events, loading = false }) => {
 
   return (
     <div className="space-y-6 sm:space-y-8">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="space-y-4">
         <div className="flex items-center gap-3">
           <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
             {events.length} {events.length === 1 ? 'Event' : 'Events'} Found
           </h2>
         </div>
         
-        {/* View mode toggle - visible on all devices */}
-        <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
-          <button 
-            onClick={() => setViewMode('grid')}
-            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${
-              viewMode === 'grid' 
-                ? 'bg-white shadow-sm text-gray-900' 
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <Grid3X3 className="h-4 w-4" />
-            <span className="hidden sm:inline">Grid</span>
-          </button>
-          <button 
-            onClick={() => setViewMode('list')}
-            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${
-              viewMode === 'list' 
-                ? 'bg-white shadow-sm text-gray-900' 
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <List className="h-4 w-4" />
-            <span className="hidden sm:inline">List</span>
-          </button>
+        {/* View mode toggle - positioned below the heading for better visual hierarchy */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1 w-fit border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
+            <button 
+              onClick={() => handleViewModeChange('grid')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 relative focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2 active:scale-95 cursor-pointer hover:scale-105 ${
+                viewMode === 'grid' 
+                  ? 'bg-white text-yellow-600 shadow-sm ring-1 ring-yellow-200 font-semibold' 
+                  : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+              }`}
+              aria-label="Switch to grid view"
+              aria-pressed={viewMode === 'grid'}
+            >
+              <Grid3X3 className={`h-4 w-4 transition-transform duration-200 ${viewMode === 'grid' ? 'scale-110' : ''}`} />
+              <span className="hidden sm:inline">Grid</span>
+            </button>
+            <button 
+              onClick={() => handleViewModeChange('list')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 relative focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2 active:scale-95 cursor-pointer hover:scale-105 ${
+                viewMode === 'list' 
+                  ? 'bg-white text-yellow-600 shadow-sm ring-1 ring-yellow-200 font-semibold' 
+                  : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+              }`}
+              aria-label="Switch to list view"
+              aria-pressed={viewMode === 'list'}
+            >
+              <List className={`h-4 w-4 transition-transform duration-200 ${viewMode === 'list' ? 'scale-110' : ''}`} />
+              <span className="hidden sm:inline">List</span>
+            </button>
+          </div>
+          
+          {/* Helpful description */}
+          <p className="text-xs text-gray-500 transition-all duration-300 ease-in-out">
+            {viewMode === 'grid' 
+              ? 'Grid view shows events in a card layout for visual browsing' 
+              : 'List view shows events in a compact format with more details'
+            }
+          </p>
         </div>
       </div>
       
       {viewMode === 'grid' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6" style={{ gridAutoRows: 'max-content' }}>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 transition-all duration-300 ease-in-out animate-view-transition" style={{ gridAutoRows: 'max-content' }}>
           {events.map((event, index) => (
             <div 
               key={event.id} 
@@ -290,7 +311,7 @@ const EventList: React.FC<EventListProps> = ({ events, loading = false }) => {
           ))}
         </div>
       ) : (
-        <div className="space-y-3 sm:space-y-4">
+        <div className="space-y-3 sm:space-y-4 transition-all duration-300 ease-in-out animate-view-transition">
           {events.map((event, index) => (
             <ListViewItem key={event.id} event={event} index={index} />
           ))}

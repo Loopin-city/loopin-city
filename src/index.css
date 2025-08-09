@@ -152,6 +152,17 @@
   }
 }
 
+@keyframes viewTransition {
+  0% {
+    opacity: 0;
+    transform: scale(0.98) translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
 
 .animate-fadeIn {
   animation: fadeIn 0.5s ease-in-out;
@@ -177,6 +188,10 @@
   animation: shimmer 2s infinite linear;
   background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
   background-size: 200px 100%;
+}
+
+.animate-view-transition {
+  animation: viewTransition 0.3s ease-out;
 }
 
 
