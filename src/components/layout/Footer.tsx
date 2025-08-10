@@ -278,15 +278,10 @@ const Footer: React.FC = () => {
 
         {/* Copyright Section - Mobile optimized */}
         <div className="mt-8 sm:mt-10 border-t border-accent-black/20 pt-4 sm:pt-6">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4">
-            <p className="text-xs text-accent-black font-mono text-center sm:text-left">
+          <div className="flex justify-center">
+            <p className="text-sm text-accent-black/80 font-medium text-center">
               &copy; {currentYear} Loopin. All rights reserved.
             </p>
-                          <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-end gap-2 sm:gap-6 text-xs text-accent-black font-mono text-center">
-                <span>Made with ❤️ in India</span>
-                <span className="hidden sm:inline">•</span>
-                <span>Building the future of tech events</span>
-              </div>
           </div>
         </div>
       </div>
