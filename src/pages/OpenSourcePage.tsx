@@ -1,6 +1,6 @@
 import React from 'react';
 import Layout from '../components/layout/Layout';
-import { ExternalLink, Github, Heart, Code, Users, Target, Star, GitBranch, GitPullRequest, GitCommit, Zap, Shield, Globe, Palette, BookOpen, Bug, Rocket } from 'lucide-react';
+import { ExternalLink, Github, Users, Target, Star, GitBranch, GitPullRequest, GitCommit, Zap, Shield, Globe, Palette, BookOpen, Bug, Rocket } from 'lucide-react';
 
 const OpenSourcePage: React.FC = () => {
   const handleGitHubRedirect = () => {
@@ -28,6 +28,49 @@ const OpenSourcePage: React.FC = () => {
             <p className="text-lg sm:text-xl lg:text-2xl text-accent-black font-medium mb-6 sm:mb-8 max-w-4xl mx-auto leading-relaxed px-4">
               Built by the community, for the community. Join us in strengthening India's local tech ecosystem through collaborative development.
             </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Call to Action Section - Moved to top for better UX */}
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-16 sm:mb-20">
+        <div className="bg-gradient-to-r from-primary-400 to-primary-500 rounded-2xl sm:rounded-3xl p-8 sm:p-12 shadow-2xl text-center">
+
+          <h2 className="text-3xl sm:text-4xl font-bold text-accent-black mb-4 sm:mb-6">Ready to Contribute?</h2>
+          <p className="text-lg sm:text-xl text-accent-black mb-6 sm:mb-8 max-w-2xl mx-auto leading-relaxed px-4">
+            Join hundreds of developers building the future of tech event discovery in India. Every contribution makes a difference.
+          </p>
+          
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-6 sm:mb-8">
+            <button
+              onClick={handleGitHubRedirect}
+              className="inline-flex items-center gap-3 bg-accent-black text-white font-bold px-6 sm:px-8 py-3 sm:py-4 rounded-full shadow-lg hover:bg-gray-800 focus:bg-gray-800 focus:outline-none focus:ring-4 focus:ring-primary-300 transition-all transform hover:scale-105 text-base sm:text-lg"
+              aria-label="View Loopin City project on GitHub (opens in new tab)"
+            >
+              <Github className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden="true" />
+              View on GitHub
+              <ExternalLink className="h-3 w-3 sm:h-4 sm:w-4" aria-hidden="true" />
+            </button>
+            
+            <div className="flex items-center gap-2 text-accent-black">
+              <Star className="h-4 w-4 sm:h-5 sm:w-5 fill-current" />
+              <span className="font-medium text-sm sm:text-base">Star the repository</span>
+            </div>
+          </div>
+          
+          <div className="flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-6 text-xs sm:text-sm text-accent-black">
+            <div className="flex items-center gap-3 sm:gap-2">
+              <GitBranch className="h-5 w-5 sm:h-4 sm:w-4" />
+              <span className="text-sm sm:text-xs font-medium">Fork & Clone</span>
+            </div>
+            <div className="flex items-center gap-3 sm:gap-2">
+              <GitCommit className="h-5 w-5 sm:h-4 sm:w-4" />
+              <span className="text-sm sm:text-xs font-medium">Make Changes</span>
+            </div>
+            <div className="flex items-center gap-3 sm:gap-2">
+              <GitPullRequest className="h-5 w-5 sm:h-4 sm:w-4" />
+              <span className="text-sm sm:text-xs font-medium">Submit PR</span>
+            </div>
           </div>
         </div>
       </div>
@@ -200,53 +243,6 @@ const OpenSourcePage: React.FC = () => {
                 </div>
                 <p className="text-sm sm:text-base text-accent-black leading-relaxed">Improve platform security and add comprehensive testing for better reliability.</p>
               </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Call to Action Section */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-16 sm:mb-20">
-        <div className="bg-gradient-to-r from-primary-400 to-primary-500 rounded-2xl sm:rounded-3xl p-8 sm:p-12 shadow-2xl text-center">
-          <div className="flex justify-center mb-4 sm:mb-6">
-            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-accent-black rounded-full flex items-center justify-center">
-              <Github className="h-6 w-6 sm:h-8 sm:w-8 text-primary-400" />
-            </div>
-          </div>
-          <h2 className="text-3xl sm:text-4xl font-bold text-accent-black mb-4 sm:mb-6">Ready to Contribute?</h2>
-          <p className="text-lg sm:text-xl text-accent-black mb-6 sm:mb-8 max-w-2xl mx-auto leading-relaxed px-4">
-            Join hundreds of developers building the future of tech event discovery in India. Every contribution makes a difference.
-          </p>
-          
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-6 sm:mb-8">
-            <button
-              onClick={handleGitHubRedirect}
-              className="inline-flex items-center gap-3 bg-accent-black text-white font-bold px-6 sm:px-8 py-3 sm:py-4 rounded-full shadow-lg hover:bg-gray-800 focus:bg-gray-800 focus:outline-none focus:ring-4 focus:ring-primary-300 transition-all transform hover:scale-105 text-base sm:text-lg"
-              aria-label="View Loopin City project on GitHub (opens in new tab)"
-            >
-              <Github className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden="true" />
-              View on GitHub
-              <ExternalLink className="h-3 w-3 sm:h-4 sm:w-4" aria-hidden="true" />
-            </button>
-            
-            <div className="flex items-center gap-2 text-accent-black">
-              <Star className="h-4 w-4 sm:h-5 sm:w-5 fill-current" />
-              <span className="font-medium text-sm sm:text-base">Star the repository</span>
-            </div>
-          </div>
-          
-          <div className="flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-6 text-xs sm:text-sm text-accent-black">
-            <div className="flex items-center gap-3 sm:gap-2">
-              <GitBranch className="h-5 w-5 sm:h-4 sm:w-4" />
-              <span className="text-sm sm:text-xs font-medium">Fork & Clone</span>
-            </div>
-            <div className="flex items-center gap-3 sm:gap-2">
-              <GitCommit className="h-5 w-5 sm:h-4 sm:w-4" />
-              <span className="text-sm sm:text-xs font-medium">Make Changes</span>
-            </div>
-            <div className="flex items-center gap-3 sm:gap-2">
-              <GitPullRequest className="h-5 w-5 sm:h-4 sm:w-4" />
-              <span className="text-sm sm:text-xs font-medium">Submit PR</span>
             </div>
           </div>
         </div>
