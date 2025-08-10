@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { MapPin, Calendar, ExternalLink, Users, Clock, ArrowRight } from 'lucide-react';
 import type { Event } from '../../types';
 import { formatDateTime, formatDateRange, getEventTypeColor } from '../../utils/formatters';
+import { incrementRegistrationClicks } from '../../api/events';
 
 interface EventCardProps {
   event: Event;
@@ -192,8 +193,17 @@ const EventCard: React.FC<EventCardProps> = ({ event }) => {
           <a 
             href={event.registrationUrl}
             target="_blank"
-            rel="noopener noreferrer" 
+            rel="noopener noreferrer"
             className="flex-1 bg-yellow-400 hover:bg-yellow-500 group-hover:bg-black group-hover:text-yellow-400 text-black text-sm font-bold py-2.5 px-4 rounded-lg transition-all duration-500 text-center shadow-sm hover:shadow-xl flex items-center justify-center gap-1 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-1 transform hover:scale-105 active:scale-95 sm:hover:scale-105 sm:hover:bg-yellow-500 sm:group-hover:bg-black sm:group-hover:text-yellow-400"
+            onClick={async (e) => {
+              e.preventDefault();
+              try {
+                await incrementRegistrationClicks(event.id);
+              } catch (err) {
+                // Optionally handle error
+              }
+              window.open(event.registrationUrl, '_blank', 'noopener,noreferrer');
+            }}
           >
             Register <ExternalLink className="h-3 w-3 transition-transform duration-300 group-hover:rotate-12 sm:group-hover:rotate-12" />
           </a>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '../components/layout/Layout';
 import { useLocation } from '../contexts/LocationContext';
-import { getVenueLeaderboard } from '../utils/supabase';
+import { getVenueLeaderboard } from '../api/leaderboard';
 import { Trophy, MapPin, Calendar, Award } from 'lucide-react';
 
 const VenuePartnersPage: React.FC = () => {

@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback, memo } from 'react';
 import type { EventType } from '../../types';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import { supabase, findOrCreateVenue, incrementCommunityEventCount, incrementVenueEventCount } from '../../utils/supabase';
+import { supabase } from '../../utils/supabase';
+import { findOrCreateVenue } from '../../api/venues';
 import { useLocation } from '../../contexts/LocationContext';
 import { CheckCircle, XCircle, AlertCircle, Loader2 } from 'lucide-react';
 
@@ -128,9 +129,16 @@ const FormField = memo(({
     </div>
   );
 });
+import { getCities } from '../../api/cities';
+import { sendEventAlertToSubscribers } from '../../api/alerts';
+import type { City } from '../../types';
 
 const EventSubmissionForm: React.FC = () => {
-  const { selectedCity } = useLocation();
+  const { selectedCity: globalSelectedCity, setSelectedCity: setGlobalSelectedCity } = useLocation();
+  const [cities, setCities] = useState<City[]>([]);
+  const [citySearch, setCitySearch] = useState('');
+  const [selectedCity, setSelectedCity] = useState<City | null>(globalSelectedCity);
+  const [showCityDropdown, setShowCityDropdown] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
   const [submitSuccess, setSubmitSuccess] = useState(false);
@@ -341,6 +349,7 @@ const EventSubmissionForm: React.FC = () => {
     }
   }, [fieldTouched, fieldErrors]); // Removed formData dependency to prevent excessive re-renders
   
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -822,6 +831,10 @@ const EventSubmissionForm: React.FC = () => {
           <p className="text-green-700 mb-6">
             Your event has been submitted for review. Our team will verify the details and get back to you soon.
             We'll contact you at {formData.organizerEmail} once the review is complete.
+            <br /><br />
+            <span className="text-sm text-gray-600">
+              💡 <strong>Pro tip:</strong> When your event is approved, subscribers in {selectedCity?.name} will automatically receive email alerts about your event!
+            </span>
           </p>
           <div className="bg-white rounded-lg p-4">
             <h3 className="text-lg font-medium text-gray-900 mb-2">What happens next?</h3>
@@ -1382,8 +1395,59 @@ const EventSubmissionForm: React.FC = () => {
             fieldErrors={fieldErrors}
             fieldTouched={fieldTouched}
             formData={formData}
-          />
 
+        </div>
+      </div>
+
+
+      
+
+      <div className="bg-gray-50 p-4 rounded-lg mb-6">
+        <h3 className="text-lg font-medium text-gray-900 mb-2 flex items-center gap-2">
+          <span className="text-2xl">📍</span>
+          Event Location
+        </h3>
+        <div className="mb-2">
+          <label className="form-label font-semibold text-gray-800">City*</label>
+          {selectedCity ? (
+            <div className="flex items-center gap-2 mt-2">
+              <span className="font-semibold text-base text-gray-900">{selectedCity.name}, {selectedCity.state}</span>
+              <button type="button" className="btn btn-outline text-sm" onClick={() => setSelectedCity(null)}>Change</button>
+            </div>
+          ) : (
+            <div className="relative mt-2">
+              <input
+                type="text"
+                className="form-input w-full text-base"
+                placeholder="Search city..."
+                value={citySearch}
+                onFocus={() => setShowCityDropdown(true)}
+                onChange={e => setCitySearch(e.target.value)}
+              />
+              {showCityDropdown && (
+                <div className="absolute z-10 bg-white border rounded shadow w-full max-h-60 overflow-y-auto custom-scrollbar" style={{ maxHeight: '14rem' }}>
+                  {cities.filter(city =>
+                    city.name.toLowerCase().includes(citySearch.toLowerCase()) ||
+                    city.state.toLowerCase().includes(citySearch.toLowerCase())
+                  ).map((city: City) => (
+                    <button
+                      key={city.id}
+                      type="button"
+                      className="block w-full text-left px-4 py-2 hover:bg-yellow-100 text-base text-gray-900 font-medium"
+                      onClick={() => {
+                        setSelectedCity(city);
+                        setShowCityDropdown(false);
+                        setGlobalSelectedCity(city);
+                      }}
+                    >
+                      {city.name}, {city.state}
+                    </button>
+                  ))}
+                  {cities.length === 0 && <div className="px-4 py-2 text-gray-500">No cities found</div>}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

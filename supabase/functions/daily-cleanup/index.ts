@@ -16,8 +16,14 @@ async function cleanupExpiredEvents() {
     
     const { data: expiredEvents, error: fetchError } = await supabase
       .from('events')
-      .select('id, community_id, venue_id, date, end_date, status')
-      .lt('date', now) 
+      .select(`
+        *,
+        communities (
+          id,
+          name
+        )
+      `)
+      .lt('end_date', now) 
       .eq('status', 'approved') 
 
     if (fetchError) {
@@ -26,49 +32,49 @@ async function cleanupExpiredEvents() {
     }
 
     if (!expiredEvents || expiredEvents.length === 0) {
-      console.log('✅ No expired events to clean up')
+      console.log('✅ No expired events to archive')
       return {
-        deletedEvents: 0,
+        archivedEvents: 0,
         successfulEvents: 0,
         updatedCommunities: 0,
         updatedVenues: 0
       }
     }
 
-    
-    
-    const successfulExpiredEvents = expiredEvents.filter(event => {
-      const eventStartDate = new Date(event.date)
-      const eventEndDate = event.end_date ? new Date(event.end_date) : eventStartDate
-      const currentTime = new Date()
-      
-      
-      const eventDidStart = eventStartDate <= currentTime
-      
-      
-      eventEndDate.setDate(eventEndDate.getDate() + 7)
-      
-      
-      const isOneWeekAfterEnd = eventEndDate < currentTime
-      
-      return eventDidStart && isOneWeekAfterEnd
-    })
+    console.log(`📦 Found ${expiredEvents.length} expired events to archive`)
 
-    if (successfulExpiredEvents.length === 0) {
-      console.log('⏳ No events ready for cleanup (24hr waiting period)')
-      return {
-        deletedEvents: 0,
-        successfulEvents: 0,
-        updatedCommunities: 0,
-        updatedVenues: 0
-      }
+    
+    const archivedEvents = expiredEvents.map(event => ({
+      id: event.id,
+      title: event.title,
+      date: event.date,
+      end_date: event.end_date,
+      venue: event.venue || 'Online',
+      is_online: event.is_online || false,
+      event_type: event.event_type,
+      community_id: event.community_id,
+      community_name: event.communities?.name || 'Unknown Community',
+      city_id: event.city_id,
+      featured: event.featured || false,
+      created_at: event.created_at,
+      archived_at: new Date().toISOString()
+    }))
+
+    
+    const { error: archiveError } = await supabase
+      .from('archived_events')
+      .insert(archivedEvents)
+
+    if (archiveError) {
+      console.error('❌ Error archiving events:', archiveError)
+      throw archiveError
     }
 
     
     const communityEventCounts = new Map<string, number>()
     const venueEventCounts = new Map<string, number>()
 
-    successfulExpiredEvents.forEach(event => {
+    expiredEvents.forEach(event => {
       if (event.community_id) {
         const currentCount = communityEventCounts.get(event.community_id) || 0
         communityEventCounts.set(event.community_id, currentCount + 1)
@@ -111,18 +117,18 @@ async function cleanupExpiredEvents() {
       .in('id', eventIds)
 
     if (deleteError) {
-      console.error('❌ Error deleting expired events:', deleteError)
+      console.error('❌ Error deleting archived events:', deleteError)
       throw deleteError
     }
 
     const result = {
-      deletedEvents: expiredEvents.length,
-      successfulEvents: successfulExpiredEvents.length,
+      archivedEvents: expiredEvents.length,
+      successfulEvents: expiredEvents.length,
       updatedCommunities: communityEventCounts.size,
       updatedVenues: venueEventCounts.size
     }
 
-    console.log(`✅ Successfully cleaned up ${result.deletedEvents} expired events`)
+    console.log(`✅ Successfully archived ${result.archivedEvents} expired events`)
     console.log(`🎯 Counted ${result.successfulEvents} successful events for leaderboards`)
     console.log(`🏆 Updated event counts for ${result.updatedCommunities} communities and ${result.updatedVenues} venues`)
 
