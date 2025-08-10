@@ -434,7 +434,7 @@ const TermsPage: React.FC = () => {
                 <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
                   <a 
                     href="mailto:support@loopin.city" 
-                    className="inline-flex items-center px-4 sm:px-6 py-2.5 sm:py-3 bg-primary-500 text-white font-medium rounded-full hover:bg-primary-600 transition-colors duration-200 shadow-lg hover:shadow-xl text-sm sm:text-base"
+                    className="inline-flex items-center px-4 sm:px-6 py-2.5 sm:py-3 bg-primary-500 text-accent-black font-medium rounded-full hover:bg-primary-600 transition-colors duration-200 shadow-lg hover:shadow-xl text-sm sm:text-base"
                   >
                     <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -443,7 +443,7 @@ const TermsPage: React.FC = () => {
                   </a>
                   <a 
                     href="/contact" 
-                    className="inline-flex items-center px-4 sm:px-6 py-2.5 sm:py-3 bg-white text-primary-600 font-medium rounded-full hover:bg-gray-50 transition-colors duration-200 border-2 border-primary-500 shadow-lg hover:shadow-xl text-sm sm:text-base"
+                    className="inline-flex items-center px-4 sm:px-6 py-2.5 sm:py-3 bg-white text-accent-black font-medium rounded-full hover:bg-gray-50 transition-colors duration-200 border-2 border-primary-500 shadow-lg hover:shadow-xl text-sm sm:text-base"
                   >
                     <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
