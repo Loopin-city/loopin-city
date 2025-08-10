@@ -453,7 +453,6 @@ const TermsPage: React.FC = () => {
                 </div>
                 <div className="mt-4 sm:mt-6 text-xs sm:text-sm text-gray-600">
                   <p><strong>Response Time:</strong> We aim to respond to all legal inquiries within 48 hours</p>
-                  <p><strong>Last Updated:</strong> {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
                 </div>
               </div>
             </div>
