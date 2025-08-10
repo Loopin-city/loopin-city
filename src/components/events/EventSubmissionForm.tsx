@@ -5,6 +5,9 @@ import 'react-datepicker/dist/react-datepicker.css';
 import { supabase } from '../../utils/supabase';
 import { findOrCreateVenue } from '../../api/venues';
 import { useLocation } from '../../contexts/LocationContext';
+import { getCities } from '../../api/cities';
+import { sendEventAlertToSubscribers } from '../../api/alerts';
+import type { City } from '../../types';
 import { CheckCircle, XCircle, AlertCircle, Loader2 } from 'lucide-react';
 
 // Memoized FormField component to prevent unnecessary re-renders and focus loss
@@ -42,7 +45,7 @@ const FormField = memo(({
   children?: React.ReactNode;
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
-  onBlur: (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  onBlur: (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
   fieldErrors: Record<string, string>;
   fieldTouched: Record<string, boolean>;
   formData: any;
@@ -79,7 +82,7 @@ const FormField = memo(({
             placeholder={placeholder}
             style={{ fontFamily: 'Urbanist, Inter, Space Grotesk, Arial, sans-serif' }}
             data-error={hasError ? 'true' : 'false'}
-            aria-invalid={hasError}
+            aria-invalid={hasError ? 'true' : 'false'}
             aria-describedby={hasError ? `${name}-error` : undefined}
           />
         ) : (
@@ -105,7 +108,7 @@ const FormField = memo(({
             max={max}
             style={{ fontFamily: 'Urbanist, Inter, Space Grotesk, Arial, sans-serif' }}
             data-error={hasError ? 'true' : 'false'}
-            aria-invalid={hasError}
+            aria-invalid={hasError ? 'true' : 'false'}
             aria-describedby={hasError ? `${name}-error` : undefined}
           />
         )
@@ -129,9 +132,6 @@ const FormField = memo(({
     </div>
   );
 });
-import { getCities } from '../../api/cities';
-import { sendEventAlertToSubscribers } from '../../api/alerts';
-import type { City } from '../../types';
 
 const EventSubmissionForm: React.FC = () => {
   const { selectedCity: globalSelectedCity, setSelectedCity: setGlobalSelectedCity } = useLocation();
@@ -178,6 +178,29 @@ const EventSubmissionForm: React.FC = () => {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [fieldTouched, setFieldTouched] = useState<Record<string, boolean>>({});
   const [isValidating, setIsValidating] = useState(false);
+  
+  // Comprehensive validation rules - moved before useEffect
+  const validationRules: Record<string, {
+    required: boolean;
+    minLength?: number;
+    maxLength?: number;
+    min?: number;
+    max?: number;
+    pattern?: RegExp;
+  }> = {
+    title: { required: true, minLength: 5, maxLength: 100 },
+    description: { required: true, minLength: 20, maxLength: 500 },
+    date: { required: true },
+    endDate: { required: true },
+    organizerName: { required: true, minLength: 2, maxLength: 50 },
+    organizerEmail: { required: true, pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ },
+    organizerPhone: { required: true, pattern: /^[\+]?[1-9][\d]{0,15}$/ },
+    eventUrl: { required: true, pattern: /^https?:\/\/.+/ },
+    communityName: { required: true, minLength: 2, maxLength: 100 },
+    communityWebsite: { required: true, pattern: /^https?:\/\/.+/ },
+    communitySize: { required: true, min: 1, max: 1000000 },
+    yearFounded: { required: true, min: 1900, max: new Date().getFullYear() }
+  };
   
   // Calculate form completion percentage - optimized to prevent focus loss
   useEffect(() => {
@@ -228,29 +251,31 @@ const EventSubmissionForm: React.FC = () => {
         liveRegion.textContent = progressMessage;
       }
     }
-  }, [fieldTouched, fieldErrors, formData]); // Added formData back for accurate progress calculation
+  }, [fieldTouched, fieldErrors, formData, validationRules]); // Added validationRules dependency
+  
+  // Fetch cities when component mounts
+  useEffect(() => {
+    const fetchCities = async () => {
+      try {
+        const citiesData = await getCities();
+        setCities(citiesData);
+      } catch (error) {
+        console.error('Error fetching cities:', error);
+      }
+    };
+    
+    fetchCities();
+  }, []);
+
+  useEffect(() => {
+    if (globalSelectedCity) setSelectedCity(globalSelectedCity);
+  }, [globalSelectedCity]);
   
   const eventTypes: EventType[] = ['Hackathon', 'Workshop', 'Meetup', 'Talk', 'Conference', 'Other'];
   
-  // Comprehensive validation rules
-  const validationRules = {
-    title: { required: true, minLength: 5, maxLength: 100 },
-    description: { required: true, minLength: 20, maxLength: 500 },
-    date: { required: true },
-    endDate: { required: true },
-    organizerName: { required: true, minLength: 2, maxLength: 50 },
-    organizerEmail: { required: true, pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ },
-    organizerPhone: { required: true, pattern: /^[\+]?[1-9][\d]{0,15}$/ },
-    eventUrl: { required: true, pattern: /^https?:\/\/.+/ },
-    communityName: { required: true, minLength: 2, maxLength: 100 },
-    communityWebsite: { required: true, pattern: /^https?:\/\/.+/ },
-    communitySize: { required: true, min: 1, max: 1000000 },
-    yearFounded: { required: true, min: 1900, max: new Date().getFullYear() }
-  };
-  
   // Validation functions
   const validateField = (name: string, value: any): string | null => {
-    const rules = validationRules[name as keyof typeof validationRules];
+    const rules = validationRules[name];
     if (!rules) return null;
     
     if (rules.required && (!value || value.toString().trim() === '')) {
@@ -360,7 +385,7 @@ const EventSubmissionForm: React.FC = () => {
     setFieldErrors(prev => ({ ...prev, [name]: error || '' }));
   };
   
-  const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFieldTouched(prev => ({ ...prev, [name]: true }));
     const error = validateField(name, value);
@@ -1246,7 +1271,7 @@ const EventSubmissionForm: React.FC = () => {
                 }`}
                 style={{ fontFamily: 'Urbanist, Inter, Space Grotesk, Arial, sans-serif' }}
                 data-error={fieldErrors.eventUrl && fieldTouched.eventUrl ? 'true' : 'false'}
-                aria-invalid={fieldErrors.eventUrl && fieldTouched.eventUrl}
+                aria-invalid={fieldErrors.eventUrl && fieldTouched.eventUrl ? 'true' : 'false'}
                 aria-describedby={fieldErrors.eventUrl && fieldTouched.eventUrl ? 'eventUrl-error' : undefined}
               />
               
@@ -1349,7 +1374,7 @@ const EventSubmissionForm: React.FC = () => {
               required
               value={formData.eventType}
               onChange={handleChange}
-              onBlur={handleBlur}
+              onBlur={() => setFieldTouched(prev => ({ ...prev, eventType: true }))}
               className="form-input"
             >
               {eventTypes.map((type) => (
@@ -1395,7 +1420,7 @@ const EventSubmissionForm: React.FC = () => {
             fieldErrors={fieldErrors}
             fieldTouched={fieldTouched}
             formData={formData}
-
+          />
         </div>
       </div>
 
