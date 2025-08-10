@@ -88,7 +88,8 @@ const LocationButton = memo(({ selectedCity, setShowLocationModal }: {
   <button
     onClick={() => setShowLocationModal(true)}
     className="group flex items-center space-x-2 text-accent-black hover:bg-yellow-200 hover:shadow-lg px-4 py-2.5 rounded-xl transition-all duration-300 border-2 border-accent-black text-sm sm:text-base min-h-[44px] justify-center transform-gpu hover:scale-105 active:scale-95 bg-white/80 backdrop-blur-sm shadow-md hover:shadow-xl"
-    aria-label={`Select city. Current city: ${selectedCity?.name || 'None selected'}`}
+    aria-label={`${selectedCity ? `Change city from ${selectedCity.name}` : 'Select your city'} to discover local tech events`}
+    title={selectedCity ? `Currently viewing events in ${selectedCity.name}. Click to change city.` : 'Click to select your city and discover local tech events'}
   >
     <MapPin className="h-4 w-4 group-hover:rotate-12 transition-transform duration-300" />
     <span className="hidden md:inline font-semibold">{selectedCity?.name || 'Select City'}</span>
