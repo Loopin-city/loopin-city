@@ -190,10 +190,10 @@ const Footer: React.FC = () => {
                 <img 
                   src="/loopin-logo.svg" 
                   alt="Loopin Logo" 
-                  className="h-14 w-auto sm:h-16 transition-transform duration-300 group-hover:rotate-3" 
+                  className="h-16 w-auto sm:h-20 transition-transform duration-300 group-hover:rotate-3" 
                   loading="lazy"
                 />
-                <span className="ml-3 text-lg sm:text-xl font-extrabold font-mono text-accent-black group-hover:underline transition-all duration-200" style={{ fontFamily: 'Urbanist, Inter, Space Grotesk, Arial, sans-serif' }}>
+                <span className="ml-3 text-xl sm:text-2xl font-extrabold font-mono text-accent-black group-hover:underline transition-all duration-200" style={{ fontFamily: 'Urbanist, Inter, Space Grotesk, Arial, sans-serif' }}>
                   Loopin
                 </span>
               </div>
