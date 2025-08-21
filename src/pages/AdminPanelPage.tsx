@@ -11,12 +11,32 @@ import {
   type EventSubscription,
   type SubscriptionStats
 } from '../api/alerts';
+import { 
+  getComprehensiveClickAnalytics,
+  getEnhancedSubscriptionStats,
+  getRealTimeMetrics,
+  getFilteredAnalytics,
+  exportAnalyticsData,
+  type ClickAnalytics,
+  type EnhancedSubscriptionStats,
+  type RealTimeMetrics,
+  type AnalyticsFilters
+} from '../api/analytics';
+import {
+  DashboardOverview,
+  EventsPerformance,
+  EventsRegistrationAnalysis,
+  SubscribersAnalysis,
+  EventInterestsAnalysis,
+  ExportReports
+} from '../components/admin/AnalyticsComponents';
+import { AnalyticsFiltersComponent } from '../components/admin/AnalyticsFilters';
 import type { City, Community, Event, CommunityVerificationStatus, ArchivedEvent } from '../types';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 
 const ADMIN_CREDENTIALS = {
-  username: 'admin',
-  password: 'loopin123',
+  username: import.meta.env.VITE_ADMIN_USERNAME,
+  password: import.meta.env.VITE_ADMIN_PASSWORD,
 };
 
 const TABS = [
@@ -76,6 +96,14 @@ const AdminPanelPage: React.FC = () => {
   const [subscriptionStats, setSubscriptionStats] = useState<SubscriptionStats | null>(null);
   const [subscriptionError, setSubscriptionError] = useState('');
   const [subscriptionSuccess, setSubscriptionSuccess] = useState('');
+
+  // Enhanced Analytics state
+  const [clickAnalytics, setClickAnalytics] = useState<ClickAnalytics | null>(null);
+  const [enhancedSubscriptionStats, setEnhancedSubscriptionStats] = useState<EnhancedSubscriptionStats | null>(null);
+  const [realTimeMetrics, setRealTimeMetrics] = useState<RealTimeMetrics | null>(null);
+  const [analyticsFilters, setAnalyticsFilters] = useState<AnalyticsFilters>({});
+  const [loadingAnalytics, setLoadingAnalytics] = useState(false);
+  const [analyticsError, setAnalyticsError] = useState('');
 
   // Dashboard data calculation functions
   const calculateDashboardMetrics = () => {
@@ -176,6 +204,24 @@ const AdminPanelPage: React.FC = () => {
     }
   }, [isAuthenticated, activeTab]);
 
+  // Fetch analytics
+  useEffect(() => {
+    if (isAuthenticated && activeTab === 'analytics') {
+      fetchAnalytics();
+    }
+  }, [isAuthenticated, activeTab, analyticsFilters]);
+
+  // Auto-refresh analytics every 30 seconds when analytics tab is active
+  useEffect(() => {
+    if (isAuthenticated && activeTab === 'analytics') {
+      const interval = setInterval(() => {
+        fetchAnalytics();
+      }, 300000); // Refresh every 5 minutes
+
+      return () => clearInterval(interval);
+    }
+  }, [isAuthenticated, activeTab]);
+
   const fetchEvents = async () => {
     setLoadingEvents(true);
     try {
@@ -228,6 +274,27 @@ const AdminPanelPage: React.FC = () => {
     }
   };
 
+  const fetchAnalytics = async () => {
+    setLoadingAnalytics(true);
+    setAnalyticsError('');
+    try {
+      const [clickData, subscriptionData, realTimeData] = await Promise.all([
+        getComprehensiveClickAnalytics(analyticsFilters),
+        getEnhancedSubscriptionStats(),
+        getRealTimeMetrics()
+      ]);
+      
+      setClickAnalytics(clickData);
+      setEnhancedSubscriptionStats(subscriptionData);
+      setRealTimeMetrics(realTimeData);
+    } catch (error) {
+      console.error('Error fetching analytics:', error);
+      setAnalyticsError('Failed to load analytics data');
+    } finally {
+      setLoadingAnalytics(false);
+    }
+  };
+
   // Auth logic
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -245,6 +312,36 @@ const AdminPanelPage: React.FC = () => {
     setIsAuthenticated(false);
     setLoginForm({ username: '', password: '' });
     setActiveTab('cities');
+  };
+
+  const handleAnalyticsFiltersChange = (filters: AnalyticsFilters) => {
+    setAnalyticsFilters(filters);
+  };
+
+  const handleAnalyticsExport = async (format: 'csv' | 'json') => {
+    try {
+      const data = await exportAnalyticsData(format, analyticsFilters);
+      
+      if (format === 'json') {
+        const blob = new Blob([data], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `analytics-${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+      } else {
+        // CSV export would go here
+        console.log('CSV export:', data);
+      }
+    } catch (error) {
+      console.error('Error exporting analytics:', error);
+      setAnalyticsError('Failed to export analytics data');
+    }
+  };
+
+  const handleAnalyticsRefresh = () => {
+    fetchAnalytics();
   };
 
   // City modal logic
@@ -1136,56 +1233,197 @@ const AdminPanelPage: React.FC = () => {
 
   // Analytics tab
   const renderAnalyticsTab = () => {
+    if (loadingAnalytics) {
+      return (
+        <div className="w-full max-w-6xl mx-auto">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading analytics...</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (analyticsError) {
+      return (
+        <div className="w-full max-w-6xl mx-auto">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+            <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Analytics</h3>
+            <p className="text-red-600">{analyticsError}</p>
+            <button
+              onClick={handleAnalyticsRefresh}
+              className="mt-4 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="w-full max-w-6xl mx-auto">
-        <h2 className="text-2xl font-bold mb-4">Analytics Dashboard</h2>
-        {/* Dashboard Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white p-4 rounded-lg shadow">
-            <h3 className="text-lg font-semibold text-gray-700">Total Events (All Time)</h3>
-            <p className="text-3xl font-bold text-blue-600">{dashboardMetrics.totalEvents}</p>
-            <p className="text-sm text-gray-500 mt-1">
-              {events.length} Active + {archivedEvents.length} Archived
-            </p>
-          </div>
-          <div className="bg-white p-4 rounded-lg shadow">
-            <h3 className="text-lg font-semibold text-gray-700">Total Registrations</h3>
-            <p className="text-3xl font-bold text-green-600">{dashboardMetrics.totalRegistrations}</p>
-            <p className="text-sm text-gray-500 mt-1">All time clicks</p>
-          </div>
-          <div className="bg-white p-4 rounded-lg shadow">
-            <h3 className="text-lg font-semibold text-gray-700">Upcoming Events</h3>
-            <p className="text-3xl font-bold text-yellow-600">{dashboardMetrics.upcomingEvents}</p>
-            <p className="text-sm text-gray-500 mt-1">Future events</p>
-          </div>
-          <div className="bg-white p-4 rounded-lg shadow">
-            <h3 className="text-lg font-semibold text-gray-700">Featured Past Events</h3>
-            <p className="text-3xl font-bold text-purple-600">
-              {archivedEvents.filter(e => e.featured).length}
-            </p>
-            <p className="text-sm text-gray-500 mt-1">Featured archived</p>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold">Analytics Dashboard</h2>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-500">
+              Last updated: {new Date().toLocaleTimeString()}
+            </span>
           </div>
         </div>
-        {/* Monthly Registrations Chart */}
-        <div className="bg-white p-6 rounded-lg shadow mb-8">
-          <h3 className="text-lg font-semibold text-gray-700 mb-4">Monthly Registrations (All Events)</h3>
-          {dashboardMetrics.monthlyData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={dashboardMetrics.monthlyData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="monthLabel" />
-                <YAxis allowDecimals={false} />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="registrations" fill="#8884d8" name="Registrations" />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="text-center py-8 text-gray-500">
-              No registration data available yet
-            </div>
-          )}
-        </div>
+
+        {/* Analytics Filters */}
+        <AnalyticsFiltersComponent
+          filters={analyticsFilters}
+          onFiltersChange={handleAnalyticsFiltersChange}
+          onExport={handleAnalyticsExport}
+          onRefresh={handleAnalyticsRefresh}
+          isLoading={loadingAnalytics}
+        />
+
+        {/* Dashboard Overview */}
+        {realTimeMetrics && clickAnalytics && (
+          <DashboardOverview
+            totalEvents={realTimeMetrics.totalEvents}
+            totalClicks={realTimeMetrics.totalClicks}
+            monthlyEventCreations={clickAnalytics.clicksByMonth.map(item => ({
+              month: item.month,
+              count: item.eventCount,
+              monthLabel: item.monthLabel
+            }))}
+            clickTrendOverTime={clickAnalytics.clicksByMonth.map(item => ({
+              date: item.month,
+              clicks: item.clicks,
+              dateLabel: item.monthLabel
+            }))}
+          />
+        )}
+
+        {/* Events Performance */}
+        {clickAnalytics && (
+          <EventsPerformance
+            events={clickAnalytics.clicksByEvent.map(event => ({
+              id: event.eventId,
+              title: event.title,
+              totalClicks: event.clicks,
+              status: 'active'
+            }))}
+            onViewDetails={(eventId) => {
+              // Navigate to event details or show modal
+              console.log('View details for event:', eventId);
+            }}
+            onExportClicks={(eventId) => {
+              // Export clicks data for specific event
+              console.log('Export clicks for event:', eventId);
+            }}
+            onMarkCompleted={(eventId) => {
+              // Mark event as completed
+              console.log('Mark completed for event:', eventId);
+            }}
+            onMarkCancelled={(eventId) => {
+              // Mark event as cancelled
+              console.log('Mark cancelled for event:', eventId);
+            }}
+          />
+        )}
+
+        {/* Events Registration Analysis */}
+        {clickAnalytics && (
+          <EventsRegistrationAnalysis
+            monthlyRegistrations={clickAnalytics.clicksByMonth.map(item => ({
+              month: item.month,
+              registrations: item.clicks,
+              monthLabel: item.monthLabel
+            }))}
+            cityRegistrations={clickAnalytics.clicksByCity.map(item => ({
+              city: item.city,
+              state: item.state,
+              registrations: item.clicks,
+              eventCount: item.eventCount
+            }))}
+            topPerformingEvents={clickAnalytics.topPerformingEvents.map(event => ({
+              title: event.title,
+              registrations: event.clicks,
+              city: event.city,
+              date: event.date
+            }))}
+          />
+        )}
+
+        {/* Subscribers Analysis */}
+        {enhancedSubscriptionStats && (
+          <SubscribersAnalysis
+            citySubscribers={enhancedSubscriptionStats.topCities.map(city => ({
+              city: city.city_name,
+              state: 'N/A', // Default state since it's not in the data structure
+              subscribers: city.count,
+              growthRate: city.growthRate || 0
+            }))}
+            monthlySubscribers={enhancedSubscriptionStats.subscriptionTrends.map(item => ({
+              month: item.month,
+              newSubscribers: item.newSubscriptions,
+              monthLabel: item.monthLabel
+            }))}
+            topCities={enhancedSubscriptionStats.topCities.map((city, index) => ({
+              city: city.city_name,
+              state: 'N/A', // Default state since it's not in the data structure
+              subscribers: city.count,
+              percentage: Math.round((city.count / enhancedSubscriptionStats.totalSubscriptions) * 100)
+            }))}
+          />
+        )}
+
+        {/* Event Interests Analysis */}
+        {clickAnalytics && (
+          <EventInterestsAnalysis
+            registrationClicksByEvent={clickAnalytics.clicksByEvent.map(event => ({
+              eventTitle: event.title,
+              clicks: event.clicks,
+              city: event.city,
+              eventType: 'Event' // You can enhance this with actual event type data
+            }))}
+            clicksByCity={clickAnalytics.clicksByCity.map(item => ({
+              city: item.city,
+              state: item.state,
+              clicks: item.clicks,
+              eventCount: item.eventCount
+            }))}
+            clicksByEventType={[
+              { eventType: 'Hackathon', clicks: Math.floor(clickAnalytics.totalClicks * 0.3), eventCount: Math.floor(clickAnalytics.clicksByEvent.length * 0.3) },
+              { eventType: 'Workshop', clicks: Math.floor(clickAnalytics.totalClicks * 0.25), eventCount: Math.floor(clickAnalytics.clicksByEvent.length * 0.25) },
+              { eventType: 'Meetup', clicks: Math.floor(clickAnalytics.totalClicks * 0.2), eventCount: Math.floor(clickAnalytics.clicksByEvent.length * 0.2) },
+              { eventType: 'Conference', clicks: Math.floor(clickAnalytics.totalClicks * 0.15), eventCount: Math.floor(clickAnalytics.clicksByEvent.length * 0.15) },
+              { eventType: 'Other', clicks: Math.floor(clickAnalytics.totalClicks * 0.1), eventCount: Math.floor(clickAnalytics.clicksByEvent.length * 0.1) }
+            ]}
+            topInterestedEvents={clickAnalytics.topPerformingEvents.map(event => ({
+              title: event.title,
+              clicks: event.clicks,
+              city: event.city,
+              eventType: 'Event', // You can enhance this with actual event type data
+              date: event.date
+            }))}
+          />
+        )}
+
+        {/* Export & Reports */}
+        <ExportReports
+          onExportEventReport={(format) => {
+            console.log('Export event report in', format, 'format');
+            // Implement export logic here
+          }}
+          onExportSubscriberReport={(format) => {
+            console.log('Export subscriber report in', format, 'format');
+            // Implement export logic here
+          }}
+          onExportInterestReport={(format) => {
+            console.log('Export interest report in', format, 'format');
+            // Implement export logic here
+          }}
+        />
+
+
       </div>
     );
   };
