@@ -20,6 +20,57 @@ export async function getVenues(cityId?: string) {
   return data;
 }
 
+export async function updateVenue(id: string, updates: Partial<{ 
+  name: string;
+  address: string;
+  cityId: string;
+  capacity?: number;
+  website?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  verification_status?: 'pending' | 'approved' | 'rejected';
+}>) {
+  // Map camelCase to snake_case where needed
+  const payload: any = {};
+  if (updates.name !== undefined) payload.name = updates.name;
+  if (updates.address !== undefined) payload.address = updates.address;
+  if (updates.cityId !== undefined) payload.city_id = updates.cityId;
+  if (updates.capacity !== undefined) payload.capacity = updates.capacity;
+  if (updates.website !== undefined) payload.website = updates.website;
+  if (updates.contactEmail !== undefined) payload.contact_email = updates.contactEmail;
+  if (updates.contactPhone !== undefined) payload.contact_phone = updates.contactPhone;
+  if ((updates as any).verification_status !== undefined) payload.verification_status = (updates as any).verification_status;
+  payload.updated_at = new Date().toISOString();
+
+  const { data, error } = await supabase
+    .from('venues')
+    .update(payload)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error updating venue:', error);
+    throw error;
+  }
+
+  return data;
+}
+
+export async function deleteVenue(id: string) {
+  const { error } = await supabase
+    .from('venues')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error('Error deleting venue:', error);
+    throw error;
+  }
+
+  return true;
+}
+
 export async function createVenue(venue: {
   name: string;
   address: string;

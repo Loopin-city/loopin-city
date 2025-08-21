@@ -221,7 +221,7 @@ export async function createEvent(event: EventFormData) {
     .insert([{
       title: event.title,
       description: event.description,
-      image_url: event.imageUrl,
+      banner_url: event.imageUrl,
       date: event.date,
       end_date: event.endDate,
       venue: event.venue,

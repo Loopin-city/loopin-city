@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getCities, addCity, updateCity, deleteCity } from '../api/cities';
 import { getAllCommunities, updateCommunity, approveCommunity, rejectCommunity, deleteCommunity } from '../api/communities';
+import { getVenues, createVenue, updateVenue, deleteVenue, findOrCreateVenue } from '../api/venues';
 import { getAllEvents, updateEvent, approveEvent, rejectEvent, deleteEvent, getArchivedEvents, archiveExpiredEvents, updateArchivedEvent, archiveSingleEvent } from '../api/events';
 import { 
   sendEventAlertToSubscribers, 
@@ -42,6 +43,7 @@ const ADMIN_CREDENTIALS = {
 const TABS = [
   { key: 'cities', label: 'Cities' },
   { key: 'communities', label: 'Communities' },
+  { key: 'venues', label: 'Venues' },
   { key: 'events', label: 'Events' },
   { key: 'past-events', label: 'Past Events' },
   { key: 'analytics', label: 'Analytics' },
@@ -104,6 +106,14 @@ const AdminPanelPage: React.FC = () => {
   const [analyticsFilters, setAnalyticsFilters] = useState<AnalyticsFilters>({});
   const [loadingAnalytics, setLoadingAnalytics] = useState(false);
   const [analyticsError, setAnalyticsError] = useState('');
+
+  // Venues state
+  const [venues, setVenues] = useState<any[]>([]);
+  const [loadingVenues, setLoadingVenues] = useState(false);
+  const [editingVenueId, setEditingVenueId] = useState<string | null>(null);
+  const [venueForm, setVenueForm] = useState<{ name: string; address: string; cityId: string; capacity?: number; website?: string; contactEmail?: string; contactPhone?: string; verification_status?: 'pending'|'approved'|'rejected' }>({ name: '', address: '', cityId: '' });
+  const [venueError, setVenueError] = useState('');
+  const [venueSuccess, setVenueSuccess] = useState('');
 
   // Dashboard data calculation functions
   const calculateDashboardMetrics = () => {
@@ -170,6 +180,103 @@ const AdminPanelPage: React.FC = () => {
       fetchCommunities();
     }
   }, [isAuthenticated, activeTab]);
+  // Fetch venues
+  useEffect(() => {
+    if (isAuthenticated && activeTab === 'venues') {
+      fetchVenuesList();
+      fetchCities();
+    }
+  }, [isAuthenticated, activeTab]);
+
+  const fetchVenuesList = async () => {
+    setLoadingVenues(true);
+    try {
+      const data = await getVenues();
+      setVenues(data);
+    } catch (e) {
+      setVenueError('Failed to load venues');
+    } finally {
+      setLoadingVenues(false);
+    }
+  };
+
+  const handleVenueFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    setVenueForm({ ...venueForm, [e.target.name]: e.target.value });
+  };
+
+  const startEditVenue = (venue: any) => {
+    setEditingVenueId(venue.id);
+    setVenueForm({
+      name: venue.name || '',
+      address: venue.address || '',
+      cityId: venue.city_id || venue.cityId || '',
+      capacity: venue.capacity || undefined,
+      website: venue.website || '',
+      contactEmail: venue.contact_email || '',
+      contactPhone: venue.contact_phone || '',
+      verification_status: venue.verification_status || 'pending',
+    });
+    setVenueError('');
+    setVenueSuccess('');
+  };
+
+  const cancelEditVenue = () => {
+    setEditingVenueId(null);
+    setVenueForm({ name: '', address: '', cityId: '' });
+  };
+
+  const saveVenueEdit = async (id: string) => {
+    setVenueError('');
+    setVenueSuccess('');
+    if (!venueForm.name.trim() || !venueForm.cityId) {
+      setVenueError('Name and City are required');
+      return;
+    }
+    try {
+      await updateVenue(id, venueForm);
+      setVenueSuccess('Venue updated');
+      setEditingVenueId(null);
+      fetchVenuesList();
+    } catch (e: any) {
+      setVenueError(e.message || 'Failed to update venue');
+    }
+  };
+
+  const handleDeleteVenue = async (venue: any) => {
+    if (!window.confirm(`Delete venue ${venue.name}?`)) return;
+    try {
+      await deleteVenue(venue.id);
+      setVenueSuccess('Venue deleted successfully');
+      fetchVenuesList();
+    } catch (e: any) {
+      setVenueError(e.message || 'Failed to delete venue');
+    }
+  };
+
+  const openAddVenue = () => {
+    setEditingVenueId('new');
+    setVenueForm({ name: '', address: '', cityId: '' });
+    setVenueError('');
+    setVenueSuccess('');
+  };
+
+  const saveNewVenue = async () => {
+    setVenueError('');
+    setVenueSuccess('');
+    if (!venueForm.name.trim() || !venueForm.cityId) {
+      setVenueError('Name and City are required');
+      return;
+    }
+    try {
+      await createVenue(venueForm as any);
+      setVenueSuccess('Venue created');
+      setEditingVenueId(null);
+      fetchVenuesList();
+    } catch (e: any) {
+      setVenueError(e.message || 'Failed to create venue');
+    }
+  };
+
 
   const fetchCommunities = async () => {
     setLoadingCommunities(true);
@@ -473,12 +580,11 @@ const AdminPanelPage: React.FC = () => {
   const startEditEvent = (event: Event) => {
     setEditingEventId(event.id);
     setEditingEvent(event);
-    setEventForm({
+    const baseForm: any = {
       title: event.title,
       description: event.description,
       venue: event.venue || (event as any).venue || '',
       eventType: event.eventType || (event as any).event_type || '',
-      status: (event as any).status || 'pending',
       imageUrl: event.imageUrl || (event as any).image_url || '',
       date: event.date || (event as any).date || '',
       endDate: event.endDate || (event as any).end_date || '',
@@ -490,7 +596,12 @@ const AdminPanelPage: React.FC = () => {
       cityId: event.cityId || (event as any).city_id || '',
       sponsors: event.sponsors,
       featured: event.featured || (event as any).featured || false,
-    });
+    };
+    // Only prefill status if the event already has one; do not default to 'pending'
+    if ((event as any).status) {
+      baseForm.status = (event as any).status;
+    }
+    setEventForm(baseForm);
     setShowEventModal(true);
     setEventError('');
     setEventSuccess('');
@@ -516,7 +627,7 @@ const AdminPanelPage: React.FC = () => {
       if (rest.description) updatePayload.description = rest.description;
       if (rest.venue) updatePayload.venue = rest.venue;
       if (rest.eventType) updatePayload.event_type = rest.eventType;
-      if (rest.imageUrl) updatePayload.image_url = rest.imageUrl;
+      if (rest.imageUrl) updatePayload.banner_url = rest.imageUrl;
       if (rest.date) updatePayload.date = rest.date;
       if (rest.endDate) updatePayload.end_date = rest.endDate;
       if (rest.isOnline !== undefined) updatePayload.is_online = rest.isOnline;
@@ -526,9 +637,26 @@ const AdminPanelPage: React.FC = () => {
       if (rest.registrationUrl) updatePayload.rsvp_url = rest.registrationUrl;
       if (rest.cityId) updatePayload.city_id = rest.cityId;
       if (rest.featured !== undefined) updatePayload.featured = rest.featured;
-      // Add status if it exists and has a value
+      // Sync venue_id with venues table when venue changes
+      try {
+        const resolvedCityId = (rest.cityId || (editingEvent as any)?.city_id || (editingEvent as any)?.cityId) as string | undefined;
+        const resolvedIsOnline = (rest.isOnline !== undefined) ? rest.isOnline : ((editingEvent as any)?.is_online ?? (editingEvent as any)?.isOnline);
+        if (resolvedIsOnline) {
+          updatePayload.venue = '';
+          updatePayload.venue_id = null;
+        } else if (rest.venue && resolvedCityId) {
+          const venueId = await findOrCreateVenue(rest.venue, resolvedCityId);
+          updatePayload.venue_id = venueId;
+        }
+      } catch (venueSyncError) {
+        console.warn('Venue sync skipped:', venueSyncError);
+      }
+      // Add status only if user explicitly changed it
       if ('status' in eventForm && typeof status === 'string' && status) {
-        updatePayload.status = status;
+        const originalStatus = (editingEvent as any)?.status;
+        if (status !== originalStatus) {
+          updatePayload.status = status;
+        }
       }
       if (Object.keys(updatePayload).length === 0) {
         setEventError('No changes detected');
@@ -562,6 +690,8 @@ const AdminPanelPage: React.FC = () => {
       setEditingEvent(null);
       setShowEventModal(false);
       fetchEvents();
+      // Also refresh venues list so admin Venues tab reflects changes
+      try { fetchVenuesList && fetchVenuesList(); } catch {}
     } catch (e: any) {
       setEventError(e.message || 'Failed to update event');
     }
@@ -1785,6 +1915,164 @@ const AdminPanelPage: React.FC = () => {
       <main className="flex-1 p-4 md:p-8">
         {activeTab === 'cities' && renderCitiesTab()}
         {activeTab === 'communities' && renderCommunitiesTab()}
+        {activeTab === 'venues' && (
+          <>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">Venues</h2>
+              <button
+                className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded"
+                onClick={openAddVenue}
+              >Add Venue</button>
+            </div>
+            {venueError && <div className="text-red-600 mb-2">{venueError}</div>}
+            {venueSuccess && <div className="text-green-600 mb-2">{venueSuccess}</div>}
+            <div className="overflow-x-auto">
+              <table className="min-w-full bg-white rounded shadow">
+                <thead>
+                  <tr>
+                    <th className="px-4 py-2 text-left">Name</th>
+                    <th className="px-4 py-2 text-left">Address</th>
+                    <th className="px-4 py-2 text-left">City</th>
+                    <th className="px-4 py-2 text-left">Capacity</th>
+                    <th className="px-4 py-2 text-left">Website</th>
+                    <th className="px-4 py-2 text-left">Contact</th>
+                    <th className="px-4 py-2 text-left">Status</th>
+                    <th className="px-4 py-2">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loadingVenues ? (
+                    <tr><td colSpan={8} className="p-4 text-center">Loading...</td></tr>
+                  ) : venues.length === 0 ? (
+                    <tr><td colSpan={8} className="p-4 text-center">No venues found</td></tr>
+                  ) : (
+                    venues.map((venue: any) => (
+                      <tr key={venue.id} className="border-t">
+                        <td className="px-4 py-2">
+                          {editingVenueId === venue.id ? (
+                            <input name="name" value={venueForm.name} onChange={handleVenueFormChange} className="border rounded px-2 py-1 w-full" />
+                          ) : (
+                            <span className="font-semibold">{venue.name}</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-2">
+                          {editingVenueId === venue.id ? (
+                            <input name="address" value={venueForm.address} onChange={handleVenueFormChange} className="border rounded px-2 py-1 w-full" />
+                          ) : (
+                            <span className="text-sm text-gray-700">{venue.address}</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-2">
+                          {editingVenueId === venue.id ? (
+                            <select name="cityId" value={venueForm.cityId} onChange={handleVenueFormChange} className="border rounded px-2 py-1 w-full">
+                              <option value="">Select city</option>
+                              {cities.map(city => (
+                                <option key={city.id} value={city.id}>{city.name}, {city.state}</option>
+                              ))}
+                            </select>
+                          ) : (
+                            <span className="text-sm text-gray-700">{(() => { const c = cities.find(c => c.id === (venue.city_id || venue.cityId)); return c ? `${c.name}, ${c.state}` : '—'; })()}</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-2">
+                          {editingVenueId === venue.id ? (
+                            <input type="number" name="capacity" value={venueForm.capacity || ''} onChange={handleVenueFormChange} className="border rounded px-2 py-1 w-full" />
+                          ) : (
+                            <span className="text-sm text-gray-700">{venue.capacity || '—'}</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-2">
+                          {editingVenueId === venue.id ? (
+                            <input name="website" value={venueForm.website || ''} onChange={handleVenueFormChange} className="border rounded px-2 py-1 w-full" />
+                          ) : (
+                            venue.website ? <a className="text-blue-600 underline" href={venue.website} target="_blank" rel="noreferrer">Website</a> : '—'
+                          )}
+                        </td>
+                        <td className="px-4 py-2 text-sm">
+                          {editingVenueId === venue.id ? (
+                            <div className="grid grid-cols-2 gap-2">
+                              <input name="contactEmail" value={venueForm.contactEmail || ''} onChange={handleVenueFormChange} placeholder="Email" className="border rounded px-2 py-1" />
+                              <input name="contactPhone" value={venueForm.contactPhone || ''} onChange={handleVenueFormChange} placeholder="Phone" className="border rounded px-2 py-1" />
+                            </div>
+                          ) : (
+                            <div>
+                              <div>{venue.contact_email || '—'}</div>
+                              <div className="text-gray-600">{venue.contact_phone || '—'}</div>
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-4 py-2">
+                          {editingVenueId === venue.id ? (
+                            <select name="verification_status" value={venueForm.verification_status || 'pending'} onChange={handleVenueFormChange} className="border rounded px-2 py-1 w-full">
+                              <option value="pending">Pending</option>
+                              <option value="approved">Approved</option>
+                              <option value="rejected">Rejected</option>
+                            </select>
+                          ) : (
+                            <span className={
+                              venue.verification_status === 'approved' ? 'text-green-600' :
+                              venue.verification_status === 'rejected' ? 'text-red-600' : 'text-yellow-600'
+                            }>
+                              {venue.verification_status?.charAt(0).toUpperCase() + venue.verification_status?.slice(1)}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-2 flex gap-2">
+                          {editingVenueId === venue.id ? (
+                            <>
+                              <button className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded" onClick={() => saveVenueEdit(venue.id)}>Save</button>
+                              <button className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-3 py-1 rounded" onClick={cancelEditVenue}>Cancel</button>
+                            </>
+                          ) : (
+                            <>
+                              <button className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded" onClick={() => startEditVenue(venue)}>Edit</button>
+                              <button className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded" onClick={() => handleDeleteVenue(venue)}>Delete</button>
+                            </>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+                {editingVenueId === 'new' && (
+                  <tfoot>
+                    <tr className="border-t bg-gray-50">
+                      <td className="px-4 py-2"><input name="name" value={venueForm.name} onChange={handleVenueFormChange} placeholder="Name" className="border rounded px-2 py-1 w-full" /></td>
+                      <td className="px-4 py-2"><input name="address" value={venueForm.address} onChange={handleVenueFormChange} placeholder="Address" className="border rounded px-2 py-1 w-full" /></td>
+                      <td className="px-4 py-2">
+                        <select name="cityId" value={venueForm.cityId} onChange={handleVenueFormChange} className="border rounded px-2 py-1 w-full">
+                          <option value="">Select city</option>
+                          {cities.map(city => (
+                            <option key={city.id} value={city.id}>{city.name}, {city.state}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-4 py-2"><input type="number" name="capacity" value={venueForm.capacity || ''} onChange={handleVenueFormChange} placeholder="Capacity" className="border rounded px-2 py-1 w-full" /></td>
+                      <td className="px-4 py-2"><input name="website" value={venueForm.website || ''} onChange={handleVenueFormChange} placeholder="Website" className="border rounded px-2 py-1 w-full" /></td>
+                      <td className="px-4 py-2">
+                        <div className="grid grid-cols-2 gap-2">
+                          <input name="contactEmail" value={venueForm.contactEmail || ''} onChange={handleVenueFormChange} placeholder="Email" className="border rounded px-2 py-1" />
+                          <input name="contactPhone" value={venueForm.contactPhone || ''} onChange={handleVenueFormChange} placeholder="Phone" className="border rounded px-2 py-1" />
+                        </div>
+                      </td>
+                      <td className="px-4 py-2">
+                        <select name="verification_status" value={venueForm.verification_status || 'pending'} onChange={handleVenueFormChange} className="border rounded px-2 py-1 w-full">
+                          <option value="pending">Pending</option>
+                          <option value="approved">Approved</option>
+                          <option value="rejected">Rejected</option>
+                        </select>
+                      </td>
+                      <td className="px-4 py-2 flex gap-2">
+                        <button className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded" onClick={saveNewVenue}>Save</button>
+                        <button className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-3 py-1 rounded" onClick={cancelEditVenue}>Cancel</button>
+                      </td>
+                    </tr>
+                  </tfoot>
+                )}
+              </table>
+            </div>
+          </>
+        )}
         {activeTab === 'events' && (
           <>
             {renderEventsTab()}

@@ -107,7 +107,14 @@ export async function submitCommunityVerification(verification: {
 export async function getAllCommunities() {
   let query = supabase
     .from('communities')
-    .select('*')
+    .select(`
+      *,
+      cities (
+        id,
+        name,
+        state
+      )
+    `)
     .order('name');
 
   const { data, error } = await query;
@@ -117,5 +124,11 @@ export async function getAllCommunities() {
     throw error;
   }
 
-  return data as Community[];
+  // Map city info to camelCase fields for admin rendering
+  return (data || []).map((community: any) => ({
+    ...community,
+    cityId: community.city_id,
+    cityName: community.cities?.name,
+    cityState: community.cities?.state,
+  })) as Community[];
 } 

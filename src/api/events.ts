@@ -43,6 +43,18 @@ export async function getEvents(filters?: FilterOptions) {
 
   return data.map(event => ({
     ...event,
+    // Normalized camelCase fields for consistent frontend usage
+    imageUrl: event.banner_url,
+    endDate: event.end_date,
+    isOnline: event.is_online,
+    eventType: event.event_type,
+    communityId: event.community_id,
+    organizerName: event.organizer_name,
+    organizerEmail: event.organizer_email,
+    organizerPhone: event.organizer_phone,
+    registrationUrl: event.rsvp_url || event.registration_url,
+    createdAt: event.created_at,
+    cityId: event.city_id,
     communityName: event.communities.name,
     communityLogo: event.communities.logo,
     cityName: event.cities.name,
@@ -76,6 +88,18 @@ export async function getAllEvents() {
 
   return data.map(event => ({
     ...event,
+    // Normalized camelCase fields for admin usage
+    imageUrl: event.banner_url,
+    endDate: event.end_date,
+    isOnline: event.is_online,
+    eventType: event.event_type,
+    communityId: event.community_id,
+    organizerName: event.organizer_name,
+    organizerEmail: event.organizer_email,
+    organizerPhone: event.organizer_phone,
+    registrationUrl: event.rsvp_url || event.registration_url,
+    createdAt: event.created_at,
+    cityId: event.city_id,
     communityName: event.communities?.name,
     communityLogo: event.communities?.logo,
     cityName: event.cities?.name,
@@ -127,7 +151,7 @@ export async function createEvent(event: EventFormData) {
     .insert([{
       title: event.title,
       description: event.description,
-      image_url: event.imageUrl,
+      banner_url: event.imageUrl,
       date: event.date,
       end_date: event.endDate,
       venue: event.venue,
@@ -225,7 +249,7 @@ export async function getArchivedEvents(filters?: {
     ...event,
     community_name: event.communities?.name || event.community_name || 'Unknown Community',
     communityLogo: event.communities?.logo,
-    imageUrl: event.image_url || event.imageUrl || null,
+    imageUrl: event.banner_url || event.imageUrl || null,
     registrationClicks: event.registration_clicks || event.registrationClicks || 0
   })) as ArchivedEvent[];
 }
@@ -304,7 +328,7 @@ export async function archiveExpiredEvents() {
       community_name: event.communities?.name || 'Unknown Community',
       city_id: event.city_id,
       featured: event.featured || false,
-      image_url: event.image_url || null,
+      banner_url: event.banner_url || null,
       created_at: event.created_at,
       archived_at: new Date().toISOString()
     }));
@@ -418,7 +442,7 @@ export async function archiveSingleEvent(eventId: string) {
       community_name: event.communities?.name || 'Unknown Community',
       city_id: event.city_id,
       featured: event.featured || false,
-      image_url: event.image_url || null,
+      banner_url: event.banner_url || null,
       created_at: event.created_at,
       archived_at: new Date().toISOString()
     };
