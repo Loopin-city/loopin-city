@@ -1,0 +1,9 @@
+# Code owners for Loopin City
+# This file designates who is responsible for reviewing code changes
+
+# All files in the repository
+* @MehulPardeshi
+
+# Future contributors can be added here:
+# * @NewContributor1
+# * @NewContributor2
