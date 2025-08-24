@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { unsubscribeFromEmailLink } from '../api/alerts';
+import { unsubscribeFromEmailLink, getSubscriptionDebugInfo, reactivateAllSubscriptions } from '../api/alerts';
 import Layout from '../components/layout/Layout';
 
 const UnsubscribePage: React.FC = () => {
@@ -11,6 +11,8 @@ const UnsubscribePage: React.FC = () => {
   const [error, setError] = useState('');
   const [email, setEmail] = useState('');
   const [cityId, setCityId] = useState('');
+  const [debugInfo, setDebugInfo] = useState<any>(null);
+  const [showDebug, setShowDebug] = useState(false);
 
   useEffect(() => {
     const emailParam = searchParams.get('email');
@@ -48,6 +50,38 @@ const UnsubscribePage: React.FC = () => {
     navigate('/alerts');
   };
 
+  const handleDebugInfo = async () => {
+    if (!email) return;
+    
+    try {
+      const info = await getSubscriptionDebugInfo(email);
+      setDebugInfo(info);
+      setShowDebug(true);
+    } catch (err) {
+      console.error('Debug error:', err);
+      setError('Failed to get debug info');
+    }
+  };
+
+  const handleReactivateAll = async () => {
+    if (!email) return;
+    
+    try {
+      await reactivateAllSubscriptions(email);
+      setDebugInfo(null);
+      setShowDebug(false);
+      setError('');
+      setSuccess(false);
+      // Refresh debug info
+      const info = await getSubscriptionDebugInfo(email);
+      setDebugInfo(info);
+      setShowDebug(true);
+    } catch (err) {
+      console.error('Reactivate error:', err);
+      setError('Failed to reactivate subscriptions');
+    }
+  };
+
   if (success) {
     return (
       <Layout>
@@ -79,6 +113,24 @@ const UnsubscribePage: React.FC = () => {
               >
                 Return to Home
               </button>
+
+              {/* Debug Section for Success Page */}
+              <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                <button
+                  onClick={handleDebugInfo}
+                  className="w-full bg-gray-600 text-white py-2 px-3 rounded text-sm hover:bg-gray-700 transition-colors"
+                >
+                  🔍 Check Current Subscription Status
+                </button>
+                
+                {debugInfo && (
+                  <div className="mt-3 bg-white p-3 rounded border text-xs">
+                    <p><strong>Email:</strong> {debugInfo.email}</p>
+                    <p><strong>Active Subscriptions:</strong> {debugInfo.activeSubscriptions}</p>
+                    <p><strong>Total Cities:</strong> {debugInfo.totalSubscriptions}</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -123,6 +175,56 @@ const UnsubscribePage: React.FC = () => {
             <p className="text-sm text-gray-500 text-center">
               You can always resubscribe later by visiting our alerts page.
             </p>
+          </div>
+
+          {/* Debug Section */}
+          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-medium text-gray-700">Debug Tools</h3>
+              <button
+                onClick={() => setShowDebug(!showDebug)}
+                className="text-xs text-blue-600 hover:text-blue-800"
+              >
+                {showDebug ? 'Hide' : 'Show'} Debug Info
+              </button>
+            </div>
+            
+            {showDebug && (
+              <div className="space-y-3">
+                <button
+                  onClick={handleDebugInfo}
+                  className="w-full bg-gray-600 text-white py-2 px-3 rounded text-sm hover:bg-gray-700 transition-colors"
+                >
+                  🔍 Check Subscription Status
+                </button>
+                
+                {debugInfo && (
+                  <div className="bg-white p-3 rounded border text-xs">
+                    <p><strong>Email:</strong> {debugInfo.email}</p>
+                    <p><strong>Total:</strong> {debugInfo.totalSubscriptions}</p>
+                    <p><strong>Active:</strong> {debugInfo.activeSubscriptions}</p>
+                    <p><strong>Inactive:</strong> {debugInfo.inactiveSubscriptions}</p>
+                    <div className="mt-2">
+                      <strong>Subscriptions:</strong>
+                      {debugInfo.subscriptions.map((sub: any, index: number) => (
+                        <div key={index} className="ml-2 text-xs">
+                          • {sub.city}, {sub.state}: {sub.isActive ? '✅ Active' : '❌ Inactive'}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {debugInfo && debugInfo.inactiveSubscriptions > 0 && (
+                  <button
+                    onClick={handleReactivateAll}
+                    className="w-full bg-green-600 text-white py-2 px-3 rounded text-sm hover:bg-green-700 transition-colors"
+                  >
+                    🔄 Reactivate All Subscriptions
+                  </button>
+                )}
+              </div>
+            )}
           </div>
           
           <div className="space-y-3">

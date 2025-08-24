@@ -32,34 +32,77 @@ export async function subscribeToEventAlerts(data: SubscriptionFormData): Promis
     data.cities.map(c => c.name));
 
   for (const city of data.cities) {
-    const { data: subscription, error } = await supabase
-      .from('event_subscriptions')
-      .upsert({
-        email: data.email,
-        city_id: city.id,
-        city_name: city.name,
-        state: city.state,
-        is_active: true,
-        updated_at: new Date().toISOString()
-      }, {
-        onConflict: 'email,city_id',
-        ignoreDuplicates: false
-      })
-      .select()
-      .single();
+    try {
+      // Check if subscription already exists (active or inactive)
+      const { data: existingSubscription, error: checkError } = await supabase
+        .from('event_subscriptions')
+        .select('*')
+        .eq('email', data.email)
+        .eq('city_id', city.id)
+        .single();
 
-    if (error) {
-      console.error(`Error subscribing to alerts for ${city.name}:`, error);
-      throw new Error(`Failed to subscribe to alerts for ${city.name}: ${error.message}`);
-    }
+      if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows returned
+        console.error(`Error checking existing subscription for ${city.name}:`, checkError);
+        throw new Error(`Failed to check subscription for ${city.name}: ${checkError.message}`);
+      }
 
-    if (subscription) {
-      subscriptions.push(subscription);
-      console.log(`✅ Successfully subscribed to ${city.name} alerts`);
+      if (existingSubscription) {
+        // Reactivate existing subscription (whether it was active or inactive)
+        console.log(`🔄 Found existing subscription for ${city.name}, reactivating...`);
+        
+        const { data: reactivatedSubscription, error: reactivateError } = await supabase
+          .from('event_subscriptions')
+          .update({
+            is_active: true,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingSubscription.id)
+          .select()
+          .single();
+
+        if (reactivateError) {
+          console.error(`Error reactivating subscription for ${city.name}:`, reactivateError);
+          throw new Error(`Failed to reactivate subscription for ${city.name}: ${reactivateError.message}`);
+        }
+
+        if (reactivatedSubscription) {
+          subscriptions.push(reactivatedSubscription);
+          console.log(`✅ Reactivated subscription to ${city.name} alerts (was ${existingSubscription.is_active ? 'active' : 'inactive'})`);
+        }
+      } else {
+        // Create new subscription
+        console.log(`🆕 Creating new subscription for ${city.name}...`);
+        
+        const { data: newSubscription, error: createError } = await supabase
+          .from('event_subscriptions')
+          .insert({
+            email: data.email,
+            city_id: city.id,
+            city_name: city.name,
+            state: city.state,
+            is_active: true,
+            updated_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          console.error(`Error creating subscription for ${city.name}:`, createError);
+          throw new Error(`Failed to create subscription for ${city.name}: ${createError.message}`);
+        }
+
+        if (newSubscription) {
+          subscriptions.push(newSubscription);
+          console.log(`✅ Created new subscription to ${city.name} alerts`);
+        }
+      }
+    } catch (error) {
+      console.error(`Error processing subscription for ${city.name}:`, error);
+      throw error;
     }
   }
 
-  console.log(`🎉 Total subscriptions created: ${subscriptions.length}`);
+  console.log(`🎉 Total subscriptions processed: ${subscriptions.length}`);
   return subscriptions;
 }
 
@@ -79,18 +122,65 @@ export async function getSubscriptionsByEmail(email: string): Promise<EventSubsc
   return data || [];
 }
 
-export async function unsubscribeFromEventAlerts(email: string, cityId: string): Promise<void> {
-  const { error } = await supabase
+// Get all subscriptions for an email (including inactive ones)
+export async function getAllSubscriptionsByEmail(email: string): Promise<EventSubscription[]> {
+  const { data, error } = await supabase
     .from('event_subscriptions')
-    .update({ 
-      is_active: false,
-      updated_at: new Date().toISOString()
-    })
+    .select('*')
     .eq('email', email)
-    .eq('city_id', cityId);
+    .order('created_at', { ascending: false });
 
   if (error) {
-    console.error('Error unsubscribing from alerts:', error);
+    console.error('Error fetching all subscriptions:', error);
+    throw error;
+  }
+
+  return data || [];
+}
+
+// Check if user is subscribed to a specific city
+export async function isSubscribedToCity(email: string, cityId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('event_subscriptions')
+    .select('is_active')
+    .eq('email', email)
+    .eq('city_id', cityId)
+    .single();
+
+  if (error) {
+    console.error('Error checking subscription status:', error);
+    return false;
+  }
+
+  return data?.is_active || false;
+}
+
+export async function unsubscribeFromEventAlerts(email: string, cityId: string): Promise<void> {
+  try {
+    console.log(`🔴 Unsubscribing ${email} from city ${cityId}`);
+    
+    const { data, error } = await supabase
+      .from('event_subscriptions')
+      .update({ 
+        is_active: false,
+        updated_at: new Date().toISOString()
+      })
+      .eq('email', email)
+      .eq('city_id', cityId)
+      .select();
+
+    if (error) {
+      console.error('Error unsubscribing from alerts:', error);
+      throw error;
+    }
+
+    if (data && data.length > 0) {
+      console.log(`✅ Successfully unsubscribed ${email} from city ${cityId}`);
+    } else {
+      console.log(`ℹ️ No active subscription found for ${email} in city ${cityId}`);
+    }
+  } catch (error) {
+    console.error('Error in unsubscribeFromEventAlerts:', error);
     throw error;
   }
 }
@@ -270,6 +360,71 @@ export async function unsubscribeFromEmailLink(email: string, cityId: string): P
     console.log(`✅ Successfully unsubscribed ${email} from ${cityId} via email link`);
   } catch (error) {
     console.error('Error processing email unsubscribe:', error);
+    throw error;
+  }
+}
+
+// Reactivate all subscriptions for an email (useful for testing)
+export async function reactivateAllSubscriptions(email: string): Promise<void> {
+  try {
+    console.log(`🔄 Reactivating all subscriptions for ${email}`);
+    
+    const { data, error } = await supabase
+      .from('event_subscriptions')
+      .update({ 
+        is_active: true,
+        updated_at: new Date().toISOString()
+      })
+      .eq('email', email)
+      .select();
+
+    if (error) {
+      console.error('Error reactivating subscriptions:', error);
+      throw error;
+    }
+
+    if (data && data.length > 0) {
+      console.log(`✅ Successfully reactivated ${data.length} subscriptions for ${email}`);
+    } else {
+      console.log(`ℹ️ No subscriptions found for ${email}`);
+    }
+  } catch (error) {
+    console.error('Error in reactivateAllSubscriptions:', error);
+    throw error;
+  }
+}
+
+// Get subscription statistics for debugging
+export async function getSubscriptionDebugInfo(email: string): Promise<any> {
+  try {
+    const { data, error } = await supabase
+      .from('event_subscriptions')
+      .select('*')
+      .eq('email', email);
+
+    if (error) {
+      console.error('Error fetching subscription debug info:', error);
+      throw error;
+    }
+
+    const subscriptions = data || [];
+    const activeCount = subscriptions.filter(s => s.is_active).length;
+    const inactiveCount = subscriptions.filter(s => !s.is_active).length;
+
+    return {
+      email,
+      totalSubscriptions: subscriptions.length,
+      activeSubscriptions: activeCount,
+      inactiveSubscriptions: inactiveCount,
+      subscriptions: subscriptions.map(s => ({
+        city: s.city_name,
+        state: s.state,
+        isActive: s.is_active,
+        lastUpdated: s.updated_at
+      }))
+    };
+  } catch (error) {
+    console.error('Error in getSubscriptionDebugInfo:', error);
     throw error;
   }
 } 
