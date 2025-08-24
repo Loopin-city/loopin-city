@@ -228,12 +228,48 @@ export async function sendEventAlertToSubscribers(
       //     eventTitle,
       //     eventDate,
       //     cityName: subscription.city_name,
-      //     eventUrl
+      //     eventUrl,
+      //     unsubscribeUrl: generateUnsubscribeUrl(subscription.email, cityId)
       //   }
       // });
     }
   } catch (error) {
     console.error('Error sending event alerts:', error);
+    throw error;
+  }
+}
+
+// Generate unsubscribe URL for email templates
+export function generateUnsubscribeUrl(email: string, cityId: string): string {
+  const baseUrl = process.env.NODE_ENV === 'production' 
+    ? 'https://yourdomain.com' 
+    : 'http://localhost:3000';
+  
+  return `${baseUrl}/unsubscribe?email=${encodeURIComponent(email)}&city=${encodeURIComponent(cityId)}`;
+}
+
+// Handle unsubscribe from email link
+export async function unsubscribeFromEmailLink(email: string, cityId: string): Promise<void> {
+  try {
+    console.log(`Processing email unsubscribe for ${email} from city ${cityId}`);
+    
+    const { error } = await supabase
+      .from('event_subscriptions')
+      .update({ 
+        is_active: false,
+        updated_at: new Date().toISOString()
+      })
+      .eq('email', email)
+      .eq('city_id', cityId);
+
+    if (error) {
+      console.error('Error unsubscribing from email link:', error);
+      throw error;
+    }
+
+    console.log(`✅ Successfully unsubscribed ${email} from ${cityId} via email link`);
+  } catch (error) {
+    console.error('Error processing email unsubscribe:', error);
     throw error;
   }
 } 

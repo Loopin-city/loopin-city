@@ -18,6 +18,7 @@ import SubscribeAlertsPage from './pages/SubscribeAlertsPage';
 import AdminDebugPage from './pages/AdminDebugPage';
 import NotFoundPage from './pages/NotFoundPage';
 import AdminPanelPage from './pages/AdminPanelPage';
+import UnsubscribePage from './pages/UnsubscribePage';
 
 function App() {
   return (
@@ -35,6 +36,7 @@ function App() {
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/alerts" element={<SubscribeAlertsPage />} />
+          <Route path="/unsubscribe" element={<UnsubscribePage />} />
           <Route path="/admin-debug" element={<AdminDebugPage />} />
           <Route path="/admin2025" element={<AdminPanelPage />} />
           <Route path="*" element={<NotFoundPage />} />
