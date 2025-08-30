@@ -4,7 +4,20 @@ import type { Community } from '../types';
 export async function getCommunities(cityId?: string) {
   let query = supabase
     .from('communities')
-    .select('*')
+    .select(`
+      id,
+      name,
+      logo,
+      city_id,
+      verification_status,
+      website,
+      social_links,
+      size,
+      year_founded,
+      previous_events,
+      contact_email,
+      contact_phone
+    `)
     .order('name');
 
   if (cityId) {
@@ -18,7 +31,21 @@ export async function getCommunities(cityId?: string) {
     throw error;
   }
 
-  return data as Community[];
+  // Map the data to match our Community type
+  return (data || []).map((community: any) => ({
+    id: community.id,
+    name: community.name,
+    logo: community.logo,
+    cityId: community.city_id,
+    verification_status: community.verification_status,
+    website: community.website,
+    social_links: community.social_links || [],
+    size: community.size,
+    year_founded: community.year_founded,
+    previous_events: community.previous_events || [],
+    contact_email: community.contact_email,
+    contact_phone: community.contact_phone,
+  })) as Community[];
 }
 
 export async function createCommunity(community: { name: string; logo?: string; cityId: string }) {

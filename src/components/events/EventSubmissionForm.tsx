@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, memo } from 'react';
-import type { EventType } from '../../types';
+import type { EventType, Community } from '../../types';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { supabase } from '../../utils/supabase';
@@ -9,6 +9,8 @@ import { getCities } from '../../api/cities';
 import { sendEventAlertToSubscribers } from '../../api/alerts';
 import type { City } from '../../types';
 import { CheckCircle, XCircle, AlertCircle, Loader2 } from 'lucide-react';
+import CommunitySelectionDropdown from './CommunitySelectionDropdown';
+import CommunityFields from './CommunityFields';
 
 // Memoized FormField component to prevent unnecessary re-renders and focus loss
 const FormField = memo(({ 
@@ -155,7 +157,6 @@ const EventSubmissionForm: React.FC = () => {
     venue: '',
     isOnline: false,
     eventType: 'Meetup' as EventType,
-    organizerName: '',
     organizerEmail: '',
     organizerPhone: '',
     eventUrl: '',
@@ -163,16 +164,20 @@ const EventSubmissionForm: React.FC = () => {
     communityLogo: null as File | null,
     proofOfExistence: null as File | null,
     communityWebsite: '',
-    socialLinks: [] as string[],
+    communitySocialLinks: [] as string[],
     communitySize: '',
-    yearFounded: '',
-    previousEvents: [] as string[],
+    communityYearFounded: '',
+    communityPreviousEvents: [] as string[],
     sponsors: [] as Array<{
       name: string;
       banner: File | null;
       website_url: string;
     }>,
   });
+
+  // Community selection state
+  const [selectedCommunity, setSelectedCommunity] = useState<Community | null>(null);
+  const [isNewCommunityMode, setIsNewCommunityMode] = useState(false);
   
   // Enhanced form validation state
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -192,14 +197,13 @@ const EventSubmissionForm: React.FC = () => {
     description: { required: true, minLength: 20, maxLength: 500 },
     date: { required: true },
     endDate: { required: true },
-    organizerName: { required: true, minLength: 2, maxLength: 50 },
     organizerEmail: { required: true, pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ },
     organizerPhone: { required: true, pattern: /^[\+]?[1-9][\d]{0,15}$/ },
     eventUrl: { required: true, pattern: /^https?:\/\/.+/ },
     communityName: { required: true, minLength: 2, maxLength: 100 },
     communityWebsite: { required: true, pattern: /^https?:\/\/.+/ },
     communitySize: { required: true, min: 1, max: 1000000 },
-    yearFounded: { required: true, min: 1900, max: new Date().getFullYear() }
+    communityYearFounded: { required: true, min: 1900, max: new Date().getFullYear() }
   };
   
   // Calculate form completion percentage - optimized to prevent focus loss
@@ -228,7 +232,7 @@ const EventSubmissionForm: React.FC = () => {
     if (formData.proofOfExistence) additionalCompletedFields++;
     
     // Check social links (at least one non-empty link)
-    if (formData.socialLinks && formData.socialLinks.length > 0 && formData.socialLinks[0].trim() !== '') {
+    if (formData.communitySocialLinks && formData.communitySocialLinks.length > 0 && formData.communitySocialLinks[0].trim() !== '') {
       additionalCompletedFields++;
     }
     
@@ -329,8 +333,8 @@ const EventSubmissionForm: React.FC = () => {
       errors.proofOfExistence = 'Proof of existence is required';
     }
     
-    if (formData.socialLinks.length === 0 || formData.socialLinks[0] === '') {
-      errors.socialLinks = 'At least one social media link is required';
+    if (formData.communitySocialLinks.length === 0 || formData.communitySocialLinks[0] === '') {
+      errors.communitySocialLinks = 'At least one social media link is required';
     }
     
     if (formData.date && formData.endDate && new Date(formData.date) >= new Date(formData.endDate)) {
@@ -339,6 +343,16 @@ const EventSubmissionForm: React.FC = () => {
     
     if (!formData.isOnline && !formData.venue) {
       errors.venue = 'Venue is required for offline events';
+    }
+
+    // Community selection validation
+    if (!selectedCommunity && !isNewCommunityMode) {
+      errors.communitySelection = 'Please select an existing community or choose to add a new one';
+    }
+
+    // If in new community mode, ensure community name is not empty
+    if (isNewCommunityMode && (!formData.communityName || formData.communityName.trim() === '')) {
+      errors.communityName = 'Community name is required when adding a new community';
     }
     
     setFieldErrors(errors);
@@ -383,6 +397,141 @@ const EventSubmissionForm: React.FC = () => {
     setFieldTouched(prev => ({ ...prev, [name]: true }));
     const error = validateField(name, value);
     setFieldErrors(prev => ({ ...prev, [name]: error || '' }));
+  };
+
+  // Handle community selection
+  const handleCommunitySelect = (community: Community | null) => {
+    setSelectedCommunity(community);
+    
+    if (community) {
+      // Auto-fill form data with community information
+      setFormData(prev => ({
+        ...prev,
+        communityName: community.name,
+        communityWebsite: community.website || '',
+        communitySocialLinks: community.social_links || [],
+        communitySize: community.size?.toString() || '',
+        communityYearFounded: community.year_founded?.toString() || '',
+        communityPreviousEvents: community.previous_events || [],
+              organizerEmail: community.contact_email || prev.organizerEmail,
+      }));
+      
+      // Mark fields as touched for validation
+      const touchedFields: Record<string, boolean> = {};
+      ['communityName', 'communityWebsite', 'communitySocialLinks', 'communitySize', 'communityYearFounded'].forEach(field => {
+        touchedFields[field] = true;
+      });
+      setFieldTouched(prev => ({ ...prev, ...touchedFields }));
+      
+      // Clear errors for auto-filled fields
+      const clearedErrors = { ...fieldErrors };
+      ['communityName', 'communityWebsite', 'communitySocialLinks', 'communitySize', 'communityYearFounded'].forEach(field => {
+        delete clearedErrors[field];
+      });
+      setFieldErrors(clearedErrors);
+    }
+  };
+
+  // Handle new community mode toggle
+  const handleNewCommunityMode = (isNew: boolean) => {
+    setIsNewCommunityMode(isNew);
+    setSelectedCommunity(null);
+    
+    if (isNew) {
+      // Clear community-related fields for new community
+      setFormData(prev => ({
+        ...prev,
+        communityName: '',
+        communityWebsite: '',
+        communitySocialLinks: [],
+        communitySize: '',
+        communityYearFounded: '',
+        communityPreviousEvents: [],
+      }));
+      
+      // Clear field errors and touched states
+      const clearedErrors = { ...fieldErrors };
+      ['communityName', 'communityWebsite', 'communitySocialLinks', 'communitySize', 'communityYearFounded'].forEach(field => {
+        delete clearedErrors[field];
+      });
+      setFieldErrors(clearedErrors);
+      
+      setFieldTouched(prev => ({
+        ...prev,
+        communityName: false,
+        communityWebsite: false,
+        communitySocialLinks: false,
+        communitySize: false,
+        communityYearFounded: false,
+      }));
+    }
+  };
+
+  // Handle field changes from CommunityFields component
+  const handleFieldChange = (field: string, value: any) => {
+    if (field === 'fieldTouched') {
+      setFieldTouched(value);
+      return;
+    }
+    
+    setFormData(prev => ({ ...prev, [field]: value }));
+    
+    // Mark field as touched and validate
+    setFieldTouched(prev => ({ ...prev, [field]: true }));
+    const error = validateField(field, value);
+    setFieldErrors(prev => ({ ...prev, [field]: error || '' }));
+
+    // Check for duplicate community names when community name changes
+    if (field === 'communityName' && value && isNewCommunityMode && selectedCity) {
+      checkForDuplicateCommunity(value);
+    }
+  };
+
+  // Check for duplicate community names
+  const checkForDuplicateCommunity = async (communityName: string) => {
+    if (!selectedCity || !communityName.trim()) return;
+    
+    try {
+      const { data: existingCommunities, error } = await supabase
+        .from('communities')
+        .select('id, name, verification_status')
+        .eq('city_id', selectedCity.id)
+        .ilike('name', communityName.trim());
+
+      if (error) {
+        console.error('Error checking for duplicate communities:', error);
+        return;
+      }
+
+      if (existingCommunities && existingCommunities.length > 0) {
+        const exactMatch = existingCommunities.find(c => 
+          c.name.toLowerCase() === communityName.toLowerCase()
+        );
+
+        if (exactMatch) {
+          setFormError(`⚠️ This community already exists: "${exactMatch.name}". Please select it from the dropdown above instead of creating a new one.`);
+          
+          // Add visual indication to the community name field
+          setFieldErrors(prev => ({ 
+            ...prev, 
+            communityName: `Community "${exactMatch.name}" already exists in ${selectedCity.name}. Please select it from the dropdown.` 
+          }));
+        } else {
+          // Similar names found - show warning but allow continuation
+          setFormError(`⚠️ Similar community names found in ${selectedCity.name}. Please verify this is a different community before proceeding.`);
+        }
+      } else {
+        // No duplicates found - clear any previous errors
+        setFormError('');
+        setFieldErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors.communityName;
+          return newErrors;
+        });
+      }
+    } catch (err) {
+      console.error('Error checking for duplicate communities:', err);
+    }
   };
   
   const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -568,7 +717,7 @@ const EventSubmissionForm: React.FC = () => {
         website: formData.communityWebsite,
         organizerEmail: formData.organizerEmail,
         organizerPhone: formData.organizerPhone,
-        socialLinks: formData.socialLinks
+        socialLinks: formData.communitySocialLinks
       });
       
       
@@ -579,7 +728,7 @@ const EventSubmissionForm: React.FC = () => {
           p_website_url: formData.communityWebsite,
           p_organizer_email: formData.organizerEmail,
           p_organizer_phone: formData.organizerPhone,
-          p_social_links: formData.socialLinks
+          p_social_links: formData.communitySocialLinks
         });
 
       if (similarCommunitiesError) {
@@ -662,11 +811,11 @@ const EventSubmissionForm: React.FC = () => {
                 name: formData.communityName,
                 logo: logoUrl,
                 website: formData.communityWebsite,
-                social_links: formData.socialLinks,
+                social_links: formData.communitySocialLinks,
                 proof_of_existence: proofUrl,
                 size: formData.communitySize ? parseInt(formData.communitySize) : null,
-                year_founded: formData.yearFounded ? parseInt(formData.yearFounded) : null,
-                previous_events: formData.previousEvents,
+                                  year_founded: formData.communityYearFounded ? parseInt(formData.communityYearFounded) : null,
+                                  previous_events: formData.communityPreviousEvents,
                 verification_status: 'pending',
                 city_id: selectedCity.id,
               })
@@ -898,10 +1047,10 @@ const EventSubmissionForm: React.FC = () => {
             <div><span className="font-bold">Community Name:</span> {formData.communityName}</div>
             <div><span className="font-bold">Community Logo:</span> {formData.communityLogo ? formData.communityLogo.name : 'N/A'}</div>
             <div><span className="font-bold">Community Website:</span> {formData.communityWebsite}</div>
-            <div><span className="font-bold">Social Links:</span> {formData.socialLinks && formData.socialLinks.length > 0 ? formData.socialLinks.join(', ') : 'N/A'}</div>
+            <div><span className="font-bold">Social Links:</span> {formData.communitySocialLinks && formData.communitySocialLinks.length > 0 ? formData.communitySocialLinks.join(', ') : 'N/A'}</div>
             <div><span className="font-bold">Community Size:</span> {formData.communitySize}</div>
-            <div><span className="font-bold">Year Founded:</span> {formData.yearFounded}</div>
-            <div><span className="font-bold">Previous Events:</span> {formData.previousEvents && formData.previousEvents.length > 0 ? formData.previousEvents.join(', ') : 'N/A'}</div>
+            <div><span className="font-bold">Year Founded:</span> {formData.communityYearFounded}</div>
+            <div><span className="font-bold">Previous Events:</span> {formData.communityPreviousEvents && formData.communityPreviousEvents.length > 0 ? formData.communityPreviousEvents.join(', ') : 'N/A'}</div>
             <div><span className="font-bold">Proof of Existence:</span> {formData.proofOfExistence ? formData.proofOfExistence.name : 'N/A'}</div>
             <div><span className="font-bold">Sponsors:</span> {formData.sponsors && formData.sponsors.length > 0 ? `${formData.sponsors.length} sponsor(s) added` : 'No sponsors'}</div>
             {formData.sponsors && formData.sponsors.length > 0 && (
@@ -963,7 +1112,7 @@ const EventSubmissionForm: React.FC = () => {
               if (formData.banner) additionalCompletedFields++;
               if (formData.communityLogo) additionalCompletedFields++;
               if (formData.proofOfExistence) additionalCompletedFields++;
-              if (formData.socialLinks && formData.socialLinks.length > 0 && formData.socialLinks[0].trim() !== '') {
+              if (formData.communitySocialLinks && formData.communitySocialLinks.length > 0 && formData.communitySocialLinks[0].trim() !== '') {
                 additionalCompletedFields++;
               }
               if (formData.isOnline || (formData.venue && formData.venue.trim() !== '')) {
@@ -999,7 +1148,7 @@ const EventSubmissionForm: React.FC = () => {
                 if (formData.banner) additionalCompletedFields++;
                 if (formData.communityLogo) additionalCompletedFields++;
                 if (formData.proofOfExistence) additionalCompletedFields++;
-                if (formData.socialLinks && formData.socialLinks.length > 0 && formData.socialLinks[0].trim() !== '') {
+                if (formData.communitySocialLinks && formData.communitySocialLinks.length > 0 && formData.communitySocialLinks[0].trim() !== '') {
                   additionalCompletedFields++;
                 }
                 if (formData.isOnline || (formData.venue && formData.venue.trim() !== '')) {
@@ -1044,7 +1193,7 @@ const EventSubmissionForm: React.FC = () => {
           if (!formData.banner) missingFields.push('Event Banner');
           if (!formData.communityLogo) missingFields.push('Community Logo');
           if (!formData.proofOfExistence) missingFields.push('Proof of Existence');
-          if (!formData.socialLinks || formData.socialLinks.length === 0 || formData.socialLinks[0].trim() === '') {
+          if (!formData.communitySocialLinks || formData.communitySocialLinks.length === 0 || formData.communitySocialLinks[0].trim() === '') {
             missingFields.push('Social Media Links');
           }
           if (!formData.isOnline && (!formData.venue || formData.venue.trim() === '')) {
@@ -1477,36 +1626,8 @@ const EventSubmissionForm: React.FC = () => {
       </div>
 
       <div className="bg-gray-50 p-4 rounded-lg mb-6">
-        <h3 className="text-lg font-medium text-gray-900 mb-2">Organizer Information</h3>
+        <h3 className="text-lg font-medium text-gray-900 mb-2">Organizer Contact Information</h3>
         <div className="space-y-4">
-          <FormField
-            name="organizerName"
-            label="Your Name"
-            required
-            placeholder="John Doe"
-            value={formData.organizerName}
-            onChange={handleChange}
-            onBlur={handleBlur}
-            fieldErrors={fieldErrors}
-            fieldTouched={fieldTouched}
-            formData={formData}
-          />
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FormField
-              name="organizerEmail"
-              label="Email Address"
-              type="email"
-              required
-              placeholder="john@example.com"
-              value={formData.organizerEmail}
-              onChange={handleChange}
-              onBlur={handleBlur}
-              fieldErrors={fieldErrors}
-              fieldTouched={fieldTouched}
-              formData={formData}
-            />
-            
             <FormField
               name="organizerPhone"
               label="Phone Number"
@@ -1520,26 +1641,61 @@ const EventSubmissionForm: React.FC = () => {
               fieldTouched={fieldTouched}
               formData={formData}
             />
+          
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span className="text-blue-600 text-xs">ℹ️</span>
+              </div>
+              <div className="text-sm text-blue-800">
+                <p className="font-medium mb-1">About Organizer Information:</p>
+                <ul className="space-y-1 text-blue-700">
+                  <li>• Your name and email are now part of the community information section above</li>
+                  <li>• Phone number is still required for event coordination</li>
+                  <li>• If using an existing community, you can still edit organizer details if they differ from community contact</li>
+                </ul>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       <div className="bg-gray-50 p-4 rounded-lg mb-6">
         <h3 className="text-lg font-medium text-gray-900 mb-2">Community Information</h3>
-        <div className="space-y-4">
-          <FormField
-            name="communityName"
-            label="Community/Organization Name"
-            required
-            placeholder="e.g., Tech Community"
-            value={formData.communityName}
-            onChange={handleChange}
-            onBlur={handleBlur}
+        
+        {/* Community Selection Dropdown */}
+        <div className="mb-6">
+          <CommunitySelectionDropdown
+            selectedCommunity={selectedCommunity}
+            onCommunitySelect={handleCommunitySelect}
+            onNewCommunityMode={handleNewCommunityMode}
+            cityId={selectedCity?.id || null}
+            isNewCommunityMode={isNewCommunityMode}
+            error={fieldErrors.communitySelection}
+          />
+        </div>
+
+        {/* Community Fields */}
+        <CommunityFields
+          selectedCommunity={selectedCommunity}
+          isNewCommunityMode={isNewCommunityMode}
+          formData={{
+            communityName: formData.communityName,
+            communityWebsite: formData.communityWebsite,
+            communitySocialLinks: formData.communitySocialLinks,
+            communitySize: formData.communitySize,
+            communityYearFounded: formData.communityYearFounded,
+            communityPreviousEvents: formData.communityPreviousEvents,
+            organizerEmail: formData.organizerEmail,
+            organizerPhone: formData.organizerPhone,
+          }}
+          onFieldChange={handleFieldChange}
             fieldErrors={fieldErrors}
             fieldTouched={fieldTouched}
-            formData={formData}
           />
-          <div>
+
+        {/* Community Logo Upload */}
+        <div className="mt-6">
             <label htmlFor="communityLogo" className="form-label">Community Logo*</label>
             
             <div className="mb-4 p-6 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-2xl shadow-md">
@@ -1642,56 +1798,9 @@ const EventSubmissionForm: React.FC = () => {
               </div>
             )}
           </div>
-          <FormField
-            name="communityWebsite"
-            label="Community Website"
-            type="url"
-            required
-            placeholder="https://example.com/community"
-            pattern="https?://.+"
-            title="Please enter a valid URL starting with http:// or https://"
-            value={formData.communityWebsite}
-            onChange={handleChange}
-            onBlur={handleBlur}
-            fieldErrors={fieldErrors}
-            fieldTouched={fieldTouched}
-            formData={formData}
-          />
-          <div>
-            <label className="form-label">Social Media Links* (at least one)</label>
-            {(formData.socialLinks || ['']).map((link: string, idx: number) => (
-              <div key={idx} className="flex gap-2 mb-2">
-                <input
-                  type="url"
-                  name={`socialLinks[${idx}]`}
-                  required={idx === 0}
-                  value={link}
-                  onChange={e => {
-                    const links = [...(formData.socialLinks || [''])];
-                    links[idx] = e.target.value;
-                    setFormData(prev => ({ ...prev, socialLinks: links }));
-                  }}
-                  onBlur={() => setFieldTouched(prev => ({ ...prev, socialLinks: true }))}
-                  className="form-input flex-1"
-                  placeholder="https://example.com/social-profile"
-                  pattern="https?://.+"
-                  title="Please enter a valid URL starting with http:// or https://"
-                />
-                {idx > 0 && (
-                  <button type="button" onClick={() => {
-                    const links = [...(formData.socialLinks || [''])];
-                    links.splice(idx, 1);
-                    setFormData(prev => ({ ...prev, socialLinks: links }));
-                  }} className="btn btn-outline text-error-600">Remove</button>
-                )}
-              </div>
-            ))}
-            <button type="button" onClick={() => setFormData(prev => ({ ...prev, socialLinks: [...(prev.socialLinks || ['']), ''] }))} className="btn btn-outline mt-2">Add Social Link</button>
-            {fieldTouched.socialLinks && fieldErrors.socialLinks && (
-              <p className="text-sm text-red-500 mt-1">{fieldErrors.socialLinks}</p>
-            )}
-          </div>
-          <div>
+
+        {/* Proof of Existence */}
+        <div className="mt-6">
             <label htmlFor="proofOfExistence" className="form-label">Proof of Community Existence* (screenshot or document)</label>
             <input
               type="file"
@@ -1714,68 +1823,9 @@ const EventSubmissionForm: React.FC = () => {
               <p className="text-sm text-red-500 mt-1">{fieldErrors.proofOfExistence}</p>
             )}
           </div>
-          <FormField
-            name="communitySize"
-            label="Community Size"
-            type="number"
-            required
-            min={1}
-            placeholder="Approximate number of members"
-            value={formData.communitySize}
-            onChange={handleChange}
-            onBlur={handleBlur}
-            fieldErrors={fieldErrors}
-            fieldTouched={fieldTouched}
-            formData={formData}
-          />
-          <FormField
-            name="yearFounded"
-            label="Year Founded"
-            type="number"
-            required
-            min={1900}
-            max={new Date().getFullYear()}
-            placeholder="e.g., 2018"
-            value={formData.yearFounded}
-            onChange={handleChange}
-            onBlur={handleBlur}
-            fieldErrors={fieldErrors}
-            fieldTouched={fieldTouched}
-            formData={formData}
-          />
-          <div>
-            <label className="form-label">Previous Events (links to past events or photos)</label>
-            {(formData.previousEvents || ['']).map((link: string, idx: number) => (
-              <div key={idx} className="flex gap-2 mb-2">
-                <input
-                  type="url"
-                  name={`previousEvents[${idx}]`}
-                  value={link}
-                  onChange={e => {
-                    const links = [...(formData.previousEvents || [''])];
-                    links[idx] = e.target.value;
-                    setFormData(prev => ({ ...prev, previousEvents: links }));
-                  }}
-                  onBlur={handleBlur}
-                  className="form-input flex-1"
-                  placeholder="https://example.com/previous-event"
-                  pattern="https?://.+"
-                  title="Please enter a valid URL starting with http:// or https://"
-                />
-                {idx > 0 && (
-                  <button type="button" onClick={() => {
-                    const links = [...(formData.previousEvents || [''])];
-                    links.splice(idx, 1);
-                    setFormData(prev => ({ ...prev, previousEvents: links }));
-                  }} className="btn btn-outline text-error-600">Remove</button>
-                )}
-              </div>
-            ))}
-            <button type="button" onClick={() => setFormData(prev => ({ ...prev, previousEvents: [...(prev.previousEvents || ['']), ''] }))} className="btn btn-outline mt-2">Add Previous Event</button>
-          </div>
+
           <div className="mt-4 text-sm text-gray-600">
             <p>All submissions are subject to admin review. You may be contacted for additional verification.</p>
-          </div>
         </div>
       </div>
 

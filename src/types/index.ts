@@ -12,6 +12,13 @@ export type Community = {
   logo?: string;
   cityId: string;
   verification_status: 'pending' | 'approved' | 'rejected';
+  website?: string;
+  social_links?: string[];
+  size?: number;
+  year_founded?: number;
+  previous_events?: string[];
+  contact_email?: string;
+  contact_phone?: string;
 };
 
 export type Sponsor = {
