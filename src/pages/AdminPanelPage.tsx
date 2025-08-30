@@ -575,7 +575,14 @@ const AdminPanelPage: React.FC = () => {
   // Inline editing logic for events
   type EventFormField = keyof typeof eventForm;
   const handleEventFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    setEventForm({ ...eventForm, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    
+    // If city changes, reset community selection since communities are filtered by city
+    if (name === 'cityId') {
+      setEventForm({ ...eventForm, [name]: value, communityId: '' });
+    } else {
+      setEventForm({ ...eventForm, [name]: value });
+    }
   };
   const startEditEvent = (event: Event) => {
     setEditingEventId(event.id);
@@ -594,6 +601,7 @@ const AdminPanelPage: React.FC = () => {
       organizerPhone: event.organizerPhone || (event as any).organizer_phone || '',
       registrationUrl: event.registrationUrl || (event as any).registration_url || (event as any).rsvp_url || '',
       cityId: event.cityId || (event as any).city_id || '',
+      communityId: event.communityId || (event as any).community_id || '',
       sponsors: event.sponsors,
       featured: event.featured || (event as any).featured || false,
     };
@@ -636,6 +644,7 @@ const AdminPanelPage: React.FC = () => {
       if (rest.organizerPhone) updatePayload.organizer_phone = rest.organizerPhone;
       if (rest.registrationUrl) updatePayload.rsvp_url = rest.registrationUrl;
       if (rest.cityId) updatePayload.city_id = rest.cityId;
+      if (rest.communityId) updatePayload.community_id = rest.communityId;
       if (rest.featured !== undefined) updatePayload.featured = rest.featured;
       // Sync venue_id with venues table when venue changes
       try {
@@ -1128,6 +1137,7 @@ const AdminPanelPage: React.FC = () => {
                 <th className="px-4 py-2 text-left">Organizer</th>
                 <th className="px-4 py-2 text-left">Venue</th>
                 <th className="px-4 py-2 text-left">Type</th>
+                <th className="px-4 py-2 text-left">Community</th>
                 <th className="px-4 py-2 text-left">Date</th>
                 <th className="px-4 py-2 text-left">Status</th>
                 <th className="px-4 py-2 text-left">Featured</th>
@@ -1136,9 +1146,9 @@ const AdminPanelPage: React.FC = () => {
             </thead>
             <tbody>
               {loadingEvents ? (
-                <tr><td colSpan={8} className="p-4 text-center">Loading...</td></tr>
+                <tr><td colSpan={9} className="p-4 text-center">Loading...</td></tr>
               ) : currentAndUpcomingEvents.length === 0 ? (
-                <tr><td colSpan={8} className="p-4 text-center">No current or upcoming events found</td></tr>
+                <tr><td colSpan={9} className="p-4 text-center">No current or upcoming events found</td></tr>
               ) : currentAndUpcomingEvents.map(event => (
                 <tr key={event.id} className="border-t">
                   <td className="px-4 py-2">
@@ -1163,6 +1173,14 @@ const AdminPanelPage: React.FC = () => {
                     <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm">
                       {event.eventType}
                     </span>
+                  </td>
+                  <td className="px-4 py-2">
+                    <div className="text-sm">
+                      <div className="font-medium">{event.communityName || (event as any).community_name || 'N/A'}</div>
+                      <div className="text-gray-600 text-xs">
+                        {communities.find(c => c.id === (event.communityId || (event as any).community_id))?.verification_status || 'N/A'}
+                      </div>
+                    </div>
                   </td>
                   <td className="px-4 py-2 text-sm">
                     <div>
@@ -1701,6 +1719,27 @@ const AdminPanelPage: React.FC = () => {
                     </option>
                   ))}
                 </select>
+              </div>
+              <div>
+                <label className="block font-semibold mb-1">Community</label>
+                <select
+                  name="communityId"
+                  value={eventForm.communityId || ''}
+                  onChange={handleEventFormChange}
+                  className="w-full border rounded px-3 py-2"
+                >
+                  <option value="">Select community</option>
+                  {communities
+                    .filter(community => !eventForm.cityId || community.cityId === eventForm.cityId)
+                    .map(community => (
+                      <option key={community.id} value={community.id}>
+                        {community.name} ({community.verification_status})
+                      </option>
+                    ))}
+                </select>
+                <p className="text-sm text-gray-600 mt-1">
+                  Communities are filtered by the selected city
+                </p>
               </div>
               <div>
                 <label className="block font-semibold mb-1">Status</label>
