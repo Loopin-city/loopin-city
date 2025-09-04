@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { getCities, addCity, updateCity, deleteCity } from '../api/cities';
-import { getAllCommunities, updateCommunity, approveCommunity, rejectCommunity, deleteCommunity } from '../api/communities';
+import { getAllCommunities, updateCommunity, approveCommunity, rejectCommunity, deleteCommunity, transferCommunityEvents } from '../api/communities';
 import { getVenues, createVenue, updateVenue, deleteVenue, findOrCreateVenue } from '../api/venues';
-import { getAllEvents, updateEvent, approveEvent, rejectEvent, deleteEvent, getArchivedEvents, archiveExpiredEvents, updateArchivedEvent, archiveSingleEvent } from '../api/events';
+import { getAllEvents, updateEvent, approveEvent, rejectEvent, getArchivedEvents, archiveExpiredEvents, updateArchivedEvent, archiveSingleEvent } from '../api/events';
 import { 
-  sendEventAlertToSubscribers, 
   getAllSubscriptions, 
   updateSubscriptionStatus, 
   deleteSubscription,
@@ -16,7 +15,6 @@ import {
   getComprehensiveClickAnalytics,
   getEnhancedSubscriptionStats,
   getRealTimeMetrics,
-  getFilteredAnalytics,
   exportAnalyticsData,
   type ClickAnalytics,
   type EnhancedSubscriptionStats,
@@ -33,7 +31,7 @@ import {
 } from '../components/admin/AnalyticsComponents';
 import { AnalyticsFiltersComponent } from '../components/admin/AnalyticsFilters';
 import type { City, Community, Event, CommunityVerificationStatus, ArchivedEvent } from '../types';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
+// (Charts are handled within Analytics components)
 
 const ADMIN_CREDENTIALS = {
   username: import.meta.env.VITE_ADMIN_USERNAME,
@@ -76,6 +74,12 @@ const AdminPanelPage: React.FC = () => {
   const [communityError, setCommunityError] = useState('');
   const [communitySuccess, setCommunitySuccess] = useState('');
   const [processingCommunityId, setProcessingCommunityId] = useState<string | null>(null);
+  // Transfer modal state
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [transferFromCommunity, setTransferFromCommunity] = useState<Community | null>(null);
+  const [transferTargetId, setTransferTargetId] = useState<string>('');
+  const [transferError, setTransferError] = useState('');
+  const [transferLoading, setTransferLoading] = useState(false);
 
   // Events state
   const [events, setEvents] = useState<Event[]>([]);
@@ -115,7 +119,8 @@ const AdminPanelPage: React.FC = () => {
   const [venueError, setVenueError] = useState('');
   const [venueSuccess, setVenueSuccess] = useState('');
 
-  // Dashboard data calculation functions
+  // Dashboard data calculation functions (reserved for future use)
+  /*
   const calculateDashboardMetrics = () => {
     const allEvents = [...events, ...archivedEvents];
     const totalEvents = allEvents.length;
@@ -152,8 +157,8 @@ const AdminPanelPage: React.FC = () => {
       upcomingEvents: currentAndUpcomingEvents.length
     };
   };
-
-  const dashboardMetrics = calculateDashboardMetrics();
+  // const dashboardMetrics = calculateDashboardMetrics();
+  */
 
   // Fetch cities
   useEffect(() => {
@@ -508,7 +513,7 @@ const AdminPanelPage: React.FC = () => {
   };
 
   // Inline editing logic for communities
-  type CommunityFormField = keyof typeof communityForm;
+  // type CommunityFormField = keyof typeof communityForm; // unused
   const handleCommunityFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setCommunityForm({ ...communityForm, [e.target.name]: e.target.value });
   };
@@ -564,16 +569,60 @@ const AdminPanelPage: React.FC = () => {
       setProcessingCommunityId(null);
     }
   };
-  const handleDeleteCommunity = async (id: string) => {
-    if (!window.confirm('Delete this community?')) return;
+  const handleDeleteCommunity = async (community: Community) => {
+    const totalEvents = (community as any).event_count || 0;
+    const confirmMessage = totalEvents > 0
+      ? `This community has ${totalEvents} event(s). You must transfer them before deletion.`
+      : 'Are you sure? You should transfer events first. This cannot be undone.';
+    if (!window.confirm(confirmMessage)) return;
     try {
-      await deleteCommunity(id);
+      await deleteCommunity(community.id);
+      setCommunitySuccess('Community deleted successfully');
       fetchCommunities();
-    } catch {}
+    } catch (e: any) {
+      setCommunityError(e?.message || 'Failed to delete community');
+    }
+  };
+
+  const openTransferModal = (community: Community) => {
+    setTransferFromCommunity(community);
+    setTransferTargetId('');
+    setTransferError('');
+    setShowTransferModal(true);
+  };
+
+  const closeTransferModal = () => {
+    setShowTransferModal(false);
+    setTransferFromCommunity(null);
+    setTransferTargetId('');
+    setTransferError('');
+  };
+
+  const handleConfirmTransfer = async () => {
+    if (!transferFromCommunity || !transferTargetId) {
+      setTransferError('Please select a target community');
+      return;
+    }
+    if (transferFromCommunity.id === transferTargetId) {
+      setTransferError('Source and target communities must be different');
+      return;
+    }
+    setTransferLoading(true);
+    setTransferError('');
+    try {
+      await transferCommunityEvents(transferFromCommunity.id, transferTargetId);
+      setCommunitySuccess(`Transferred events from ${transferFromCommunity.name} successfully`);
+      closeTransferModal();
+      fetchCommunities();
+    } catch (e: any) {
+      setTransferError(e?.message || 'Failed to transfer events');
+    } finally {
+      setTransferLoading(false);
+    }
   };
 
   // Inline editing logic for events
-  type EventFormField = keyof typeof eventForm;
+  // type EventFormField = keyof typeof eventForm; // unused
   const handleEventFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     
@@ -769,17 +818,17 @@ const AdminPanelPage: React.FC = () => {
       setProcessingEventId(null);
     }
   };
-  const handleDeleteEvent = async (id: string) => {
-    if (!window.confirm('Delete this event?')) return;
-    try {
-      await deleteEvent(id);
-      setEventSuccess('Event deleted successfully');
-      fetchEvents();
-    } catch (error) {
-      setEventError('Failed to delete event');
-      console.error('Error deleting event:', error);
-    }
-  };
+  // const handleDeleteEvent = async (id: string) => {
+  //   if (!window.confirm('Delete this event?')) return;
+  //   try {
+  //     await deleteEvent(id);
+  //     setEventSuccess('Event deleted successfully');
+  //     fetchEvents();
+  //   } catch (error) {
+  //     setEventError('Failed to delete event');
+  //     console.error('Error deleting event:', error);
+  //   }
+  // };
 
   const handleToggleFeatured = async (id: string) => {
     try {
@@ -1058,6 +1107,10 @@ const AdminPanelPage: React.FC = () => {
                         onClick={() => startEditCommunity(community)}
                       >Edit</button>
                       <button
+                        className="bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded"
+                        onClick={() => openTransferModal(community)}
+                      >Transfer Events</button>
+                      <button
                         className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded disabled:opacity-50"
                         onClick={() => handleApproveCommunity(community.id)}
                         disabled={processingCommunityId === community.id || community.verification_status === 'approved'}
@@ -1072,8 +1125,9 @@ const AdminPanelPage: React.FC = () => {
                         {processingCommunityId === community.id ? 'Processing...' : 'Reject'}
                       </button>
                       <button
-                        className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
-                        onClick={() => handleDeleteCommunity(community.id)}
+                        className={`px-3 py-1 rounded text-white ${((community as any).event_count || 0) > 0 ? 'bg-red-300 cursor-not-allowed' : 'bg-red-500 hover:bg-red-600'}`}
+                        disabled={((community as any).event_count || 0) > 0}
+                        onClick={() => handleDeleteCommunity(community)}
                       >Delete</button>
                     </>
                   )}
@@ -1083,6 +1137,52 @@ const AdminPanelPage: React.FC = () => {
           </tbody>
         </table>
       </div>
+
+      {/* Transfer Events Modal */}
+      {showTransferModal && transferFromCommunity && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+            <h3 className="text-xl font-bold mb-4">Transfer Events</h3>
+            <p className="text-sm text-gray-700 mb-4">
+              Transfer all events from <span className="font-semibold">{transferFromCommunity.name}</span> to the selected community.
+            </p>
+            <div className="space-y-4">
+              <div>
+                <label className="block font-semibold mb-1">Target Community</label>
+                <select
+                  className="w-full border rounded px-3 py-2"
+                  value={transferTargetId}
+                  onChange={(e) => setTransferTargetId(e.target.value)}
+                >
+                  <option value="">Select community</option>
+                  {communities
+                    .filter(c => c.id !== transferFromCommunity.id)
+                    .map(c => (
+                      <option key={c.id} value={c.id}>
+                        {c.name} {(c as any).cityName ? `- ${(c as any).cityName}` : ''}
+                      </option>
+                    ))}
+                </select>
+              </div>
+              {transferError && <div className="text-red-600 text-sm">{transferError}</div>}
+            </div>
+            <div className="flex gap-2 justify-end mt-6">
+              <button
+                type="button"
+                className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300"
+                onClick={closeTransferModal}
+                disabled={transferLoading}
+              >Cancel</button>
+              <button
+                type="button"
+                className={`px-4 py-2 rounded font-bold ${transferTargetId && transferTargetId !== transferFromCommunity.id ? 'bg-yellow-400 hover:bg-yellow-500 text-black' : 'bg-yellow-200 text-gray-600 cursor-not-allowed'}`}
+                onClick={handleConfirmTransfer}
+                disabled={transferLoading || !transferTargetId || transferTargetId === transferFromCommunity.id}
+              >{transferLoading ? 'Transferring...' : 'Confirm Transfer'}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 
@@ -1514,7 +1614,7 @@ const AdminPanelPage: React.FC = () => {
               newSubscribers: item.newSubscriptions,
               monthLabel: item.monthLabel
             }))}
-            topCities={enhancedSubscriptionStats.topCities.map((city, index) => ({
+            topCities={enhancedSubscriptionStats.topCities.map((city) => ({
               city: city.city_name,
               state: 'N/A', // Default state since it's not in the data structure
               subscribers: city.count,
@@ -1834,7 +1934,7 @@ const AdminPanelPage: React.FC = () => {
         <div className="bg-white p-4 rounded-lg shadow mb-6">
           <h3 className="text-lg font-semibold mb-3">Top Cities by Subscriptions</h3>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-            {subscriptionStats.topCities.map((city, index) => (
+            {subscriptionStats.topCities.map((city) => (
               <div key={city.city_name} className="text-center p-2 bg-gray-50 rounded">
                 <div className="font-semibold text-sm">{city.city_name}</div>
                 <div className="text-lg font-bold text-blue-600">{city.count}</div>

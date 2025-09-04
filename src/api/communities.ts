@@ -82,6 +82,34 @@ export async function updateCommunity(id: string, updates: Partial<Community>) {
 }
 
 export async function deleteCommunity(id: string) {
+  // Guarded deletion: ensure no events (current or archived) belong to this community
+  // Check active events count
+  const { count: activeCount, error: activeCountError } = await supabase
+    .from('events')
+    .select('id', { count: 'exact', head: true })
+    .eq('community_id', id);
+
+  if (activeCountError) {
+    console.error('Error checking active events before delete:', activeCountError);
+    throw activeCountError;
+  }
+
+  // Check archived events count
+  const { count: archivedCount, error: archivedCountError } = await supabase
+    .from('archived_events')
+    .select('id', { count: 'exact', head: true })
+    .eq('community_id', id);
+
+  if (archivedCountError) {
+    console.error('Error checking archived events before delete:', archivedCountError);
+    throw archivedCountError;
+  }
+
+  if ((activeCount || 0) > 0 || (archivedCount || 0) > 0) {
+    const total = (activeCount || 0) + (archivedCount || 0);
+    throw new Error(`Cannot delete community: ${total} event(s) still linked. Transfer events first.`);
+  }
+
   const { error } = await supabase
     .from('communities')
     .delete()
@@ -159,3 +187,48 @@ export async function getAllCommunities() {
     cityState: community.cities?.state,
   })) as Community[];
 } 
+
+/**
+ * Transfer all events (current and archived) from one community to another.
+ * Also triggers event count recalculation for both communities.
+ */
+export async function transferCommunityEvents(fromCommunityId: string, toCommunityId: string) {
+  if (!fromCommunityId || !toCommunityId) {
+    throw new Error('Both fromCommunityId and toCommunityId are required');
+  }
+  if (fromCommunityId === toCommunityId) {
+    throw new Error('Source and target communities must be different');
+  }
+
+  // Update active events
+  const { error: updateActiveError } = await supabase
+    .from('events')
+    .update({ community_id: toCommunityId })
+    .eq('community_id', fromCommunityId);
+  if (updateActiveError) {
+    console.error('Error transferring active events:', updateActiveError);
+    throw updateActiveError;
+  }
+
+  // Update archived events and reset denormalized name for future joins
+  const { error: updateArchivedError } = await supabase
+    .from('archived_events')
+    .update({ community_id: toCommunityId, community_name: null as any })
+    .eq('community_id', fromCommunityId);
+  if (updateArchivedError) {
+    console.error('Error transferring archived events:', updateArchivedError);
+    throw updateArchivedError;
+  }
+
+  // Recalculate counts for both communities
+  const { error: recalcFromError } = await supabase.rpc('recalculate_community_event_count', { community_id: fromCommunityId });
+  if (recalcFromError) {
+    console.warn('Warning: failed to recalculate count for source community:', recalcFromError);
+  }
+  const { error: recalcToError } = await supabase.rpc('recalculate_community_event_count', { community_id: toCommunityId });
+  if (recalcToError) {
+    console.warn('Warning: failed to recalculate count for target community:', recalcToError);
+  }
+
+  return { success: true } as const;
+}
