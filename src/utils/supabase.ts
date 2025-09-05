@@ -1,8 +1,6 @@
 /// <reference types="vite/client" />
 
 import { createClient } from '@supabase/supabase-js';
-import type { Event, EventFormData, FilterOptions, City, Community } from '../types';
-
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -223,7 +221,7 @@ export async function createEvent(event: EventFormData) {
     .insert([{
       title: event.title,
       description: event.description,
-      image_url: event.imageUrl,
+      banner_url: event.imageUrl,
       date: event.date,
       end_date: event.endDate,
       venue: event.venue,
@@ -589,3 +587,4 @@ export async function submitCommunityVerification(verification: {
 
   return data;
 }
+

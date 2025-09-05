@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
-import { getEventById } from '../utils/supabase';
+import { getEventById } from '../api/events';
 import type { Event } from '../types';
 import { formatDateTime, formatDateRange, getEventTypeColor } from '../utils/formatters';
 import SponsorsCarousel from '../components/events/SponsorsCarousel';
@@ -20,6 +20,7 @@ import {
   Info,
   Sparkles
 } from 'lucide-react';
+import { incrementRegistrationClicks } from '../api/events';
 
 
 const developmentMockEvent: Event = {
@@ -415,8 +416,17 @@ const EventDetailPage: React.FC = () => {
                     <a 
                       href={event.registrationUrl}
                       target="_blank"
-                      rel="noopener noreferrer" 
+                      rel="noopener noreferrer"
                       className="w-full bg-black hover:bg-gray-800 text-white font-bold py-3 px-6 rounded-xl transition-colors flex items-center justify-center gap-2 group"
+                      onClick={async (e) => {
+                        e.preventDefault();
+                        try {
+                          await incrementRegistrationClicks(event.id);
+                        } catch (err) {
+                          // Optionally handle error
+                        }
+                        window.open(event.registrationUrl, '_blank', 'noopener,noreferrer');
+                      }}
                     >
                       Register Now 
                       <ExternalLink className="h-4 w-4 group-hover:translate-x-1 transition-transform" />

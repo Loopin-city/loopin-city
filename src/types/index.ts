@@ -11,6 +11,14 @@ export type Community = {
   name: string;
   logo?: string;
   cityId: string;
+  verification_status: 'pending' | 'approved' | 'rejected';
+  website?: string;
+  social_links?: string[];
+  size?: number;
+  year_founded?: number;
+  previous_events?: string[];
+  contact_email?: string;
+  contact_phone?: string;
 };
 
 export type Sponsor = {
@@ -40,6 +48,8 @@ export type Event = {
   createdAt: string;
   cityId: string;
   sponsors?: Sponsor[];
+  featured?: boolean;
+  registrationClicks: number;
 };
 
 export type EventFormData = Omit<Event, 'id' | 'createdAt' | 'communityName'> & {
@@ -49,6 +59,25 @@ export type EventFormData = Omit<Event, 'id' | 'createdAt' | 'communityName'> & 
     banner: File | null;
     website_url?: string;
   }>;
+};
+
+export type ArchivedEvent = {
+  id: string;
+  title: string;
+  date: string;
+  end_date?: string;
+  venue: string;
+  is_online: boolean;
+  event_type: string;
+  community_id: string;
+  community_name: string;
+  communityLogo?: string;
+  city_id: string;
+  featured: boolean;
+  created_at: string;
+  archived_at: string;
+  imageUrl?: string;
+  registrationClicks: number;
 };
 
 export type FilterOptions = {
