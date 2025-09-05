@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CalendarCheck, Calendar, MapPin, Users } from 'lucide-react';
+import { useLocation as useRouterLocation } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import EventList from '../components/events/EventList';
 import EventFilters from '../components/events/EventFilters';
@@ -10,6 +11,7 @@ import { getEvents, getArchivedEvents } from '../api/events';
 
 const HomePage: React.FC = () => {
   const { selectedCity } = useLocation();
+  const location = useRouterLocation();
   const [events, setEvents] = useState<Event[]>([]);
   const [archivedEvents, setArchivedEvents] = useState<ArchivedEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -87,9 +89,26 @@ const HomePage: React.FC = () => {
       }
     };
 
-    fetchEvents();
-    fetchArchivedEvents();
+    if (selectedCity) {
+      fetchEvents();
+      fetchArchivedEvents();
+    }
   }, [selectedCity]);
+
+  // Handle scroll to hero when redirected from city selection
+  useEffect(() => {
+    if (location.state?.scrollToHero) {
+      setTimeout(() => {
+        const heroSection = document.getElementById('hero-section');
+        if (heroSection) {
+          heroSection.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start' 
+          });
+        }
+      }, 100);
+    }
+  }, [location.state]);
 
   // Filter logic for upcoming events
   const filteredUpcomingEvents = events.filter(event => {
@@ -161,6 +180,7 @@ const HomePage: React.FC = () => {
   return (
     <Layout>
       <div
+        id="hero-section"
         className="min-h-screen flex flex-col justify-center items-center relative px-4 hero-bg"
         style={{
           backgroundImage: "url('/Contour Line.svg')",

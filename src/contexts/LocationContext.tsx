@@ -7,6 +7,7 @@ interface LocationContextType {
   showLocationModal: boolean;
   setShowLocationModal: (show: boolean) => void;
   resetLocationModal: () => void; 
+  isFirstTimeUser: boolean;
 }
 
 const LocationContext = createContext<LocationContextType | undefined>(undefined);
@@ -15,6 +16,7 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [selectedCity, setSelectedCity] = useState<City | null>(null);
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+  const [isFirstTimeUser, setIsFirstTimeUser] = useState(false);
 
   
   useEffect(() => {
@@ -34,6 +36,7 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         
         if (!hasSeenLocationModal) {
           setShowLocationModal(true);
+          setIsFirstTimeUser(true);
         }
         setInitialLoadComplete(true);
       }
@@ -41,6 +44,7 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       
       if (!hasSeenLocationModal) {
         setShowLocationModal(true);
+        setIsFirstTimeUser(true);
       }
       setInitialLoadComplete(true);
     }
@@ -62,6 +66,7 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     
     if (!show) {
       localStorage.setItem('hasSeenLocationModal', 'true');
+      setIsFirstTimeUser(false);
     }
   };
 
@@ -72,6 +77,7 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setSelectedCity(null);
     setShowLocationModal(true);
     setInitialLoadComplete(false);
+    setIsFirstTimeUser(true);
   };
 
   
@@ -90,6 +96,7 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         showLocationModal,
         setShowLocationModal: handleSetShowLocationModal,
         resetLocationModal,
+        isFirstTimeUser,
       }}
     >
       {children}
