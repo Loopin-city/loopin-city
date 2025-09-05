@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '../components/layout/Layout';
 import { useLocation } from '../contexts/LocationContext';
-import { getCommunityLeaderboard } from '../utils/supabase';
+import { getCommunityLeaderboard } from '../api/leaderboard';
 import { Trophy, Users, Calendar, Award } from 'lucide-react';
 
 const CommunitiesPage: React.FC = () => {

@@ -3,6 +3,9 @@ import Layout from '../components/layout/Layout';
 import { City } from '../types';
 import { Mail, Clock, MapPin, Bell } from 'lucide-react';
 import { useLocation } from '../contexts/LocationContext';
+import { useEffect } from 'react';
+import { getCities } from '../api/cities';
+import { subscribeToEventAlerts } from '../api/alerts';
 
 
 const AnimatedClock: React.FC = () => {
@@ -215,52 +218,136 @@ const citiesByState: { [key: string]: City[] } = {
 };
 
 const SubscribeAlertsPage: React.FC = () => {
+  const [email, setEmail] = useState('');
+  const [cities, setCities] = useState<City[]>([]);
+  const [selectedCities, setSelectedCities] = useState<City[]>([]);
+  const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    // Fetch cities from the backend
+    getCities().then(setCities).catch(() => setCities([]));
+  }, []);
+
+  const handleSelectCity = (city: City) => {
+    if (!selectedCities.find(c => c.id === city.id)) {
+      setSelectedCities([...selectedCities, city]);
+    }
+  };
+  const handleRemoveCity = (cityId: string) => {
+    setSelectedCities(selectedCities.filter(c => c.id !== cityId));
+  };
+  const filteredCities = cities.filter(city =>
+    city.name.toLowerCase().includes(search.toLowerCase()) &&
+    !selectedCities.some(c => c.id === city.id)
+  );
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setSuccess(false);
+    if (!email.match(/^[^@\s]+@[^@\s]+\.[^@\s]+$/)) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+    if (selectedCities.length === 0) {
+      setError('Please select at least one city.');
+      return;
+    }
+    setLoading(true);
+    try {
+      // Subscribe to event alerts for selected cities
+      await subscribeToEventAlerts({
+        email: email,
+        cities: selectedCities
+      });
+      
+      setSuccess(true);
+      setEmail('');
+      setSelectedCities([]);
+      setSearch('');
+    } catch (e) {
+      console.error('Subscription error:', e);
+      setError('Failed to subscribe. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Layout>
       <div className="min-h-screen flex flex-col items-center justify-center py-12 px-4 bg-accent-cream" style={{ backgroundColor: '#fef3c7' }}>
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-10 max-w-md w-full flex flex-col items-center text-center">
-          <div className="bg-yellow-400 text-accent-black rounded-full px-6 py-3 mb-8 flex items-center gap-3 shadow-sm">
-            <AnimatedClock />
-            <span className="font-semibold text-lg">Coming Soon</span>
-          </div>
-
           <h1 className="text-2xl font-bold text-accent-black mb-3 flex items-center gap-2">
             <Mail className="h-6 w-6 text-yellow-400" /> 
             Event Alerts
           </h1>
-          
-          <div className="text-accent-black text-center space-y-3">
-            <p className="flex items-center justify-center gap-2 font-semibold">
-              <MapPin className="h-5 w-5 text-yellow-400" />
-              <span>City-Specific Subscriptions</span>
-            </p>
-            <p className="text-sm leading-relaxed max-w-sm text-gray-600">
-              Subscribe to city-specific events and get email notifications when a new event occurs in your city.
-            </p>
-          </div>
-
-          <div className="mt-6 bg-accent-cream rounded-lg p-4 w-full border border-yellow-200">
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <Bell className="h-4 w-4 text-yellow-500" />
-              <span className="text-accent-black font-semibold text-sm">Stay Tuned</span>
+          <form onSubmit={handleSubmit} className="w-full space-y-6 mt-4">
+            <div className="text-left">
+              <label className="block font-semibold mb-1">Email</label>
+              <input
+                type="email"
+                className="w-full border rounded px-3 py-2"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                required
+                placeholder="you@email.com"
+                disabled={loading}
+              />
             </div>
-            <p className="text-sm text-gray-600">
-              We're working on bringing you personalized event alerts. Subscribe to our newsletter to be notified when this feature launches.
-            </p>
-          </div>
+            <div className="text-left">
+              <label className="block font-semibold mb-1">Select Cities</label>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {selectedCities.map(city => (
+                  <span key={city.id} className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full flex items-center gap-2">
+                    {city.name}
+                    <button type="button" className="ml-1 text-yellow-600 hover:text-red-500" onClick={() => handleRemoveCity(city.id)}>&times;</button>
+                  </span>
+                ))}
+              </div>
+              <input
+                type="text"
+                className="w-full border rounded px-3 py-2 mb-2"
+                placeholder="Search cities..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                disabled={loading}
+              />
+              <div className="max-h-40 overflow-y-auto border rounded bg-white shadow-sm">
+                {filteredCities.length === 0 ? (
+                  <div className="p-2 text-gray-400 text-sm">No cities found</div>
+                ) : filteredCities.map(city => (
+                  <button
+                    type="button"
+                    key={city.id}
+                    className="block w-full text-left px-3 py-2 hover:bg-yellow-100"
+                    onClick={() => handleSelectCity(city)}
+                    disabled={loading}
+                  >
+                    {city.name} <span className="text-xs text-gray-400">({city.state})</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            {error && <div className="text-red-600 text-sm">{error}</div>}
+            {success && (
+              <div className="text-green-600 text-sm bg-green-50 border border-green-200 rounded-lg p-3">
+                <div className="font-semibold mb-1">✅ Subscribed Successfully!</div>
+                <div>You'll receive email alerts for new events in your selected cities.</div>
+              </div>
+            )}
+            <button
+              type="submit"
+              className="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-bold py-2 rounded"
+              disabled={loading}
+            >
+              {loading ? 'Subscribing...' : 'Subscribe'}
+            </button>
+          </form>
         </div>
       </div>
-
-      <style jsx>{`
-        @keyframes spin {
-          from {
-            transform: rotate(0deg);
-          }
-          to {
-            transform: rotate(360deg);
-          }
-        }
-      `}</style>
     </Layout>
   );
 };

@@ -3,6 +3,7 @@ import EventCard from './EventCard';
 import type { Event } from '../../types';
 import { CalendarX, Sparkles, Search, Grid3X3, List, Calendar, MapPin, Users, Clock } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { incrementRegistrationClicks } from '../../api/events';
 
 interface EventListProps {
   events: Event[];
@@ -237,6 +238,15 @@ const EventList: React.FC<EventListProps> = ({ events, loading = false }) => {
             target="_blank"
             rel="noopener noreferrer"
             className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold rounded-lg transition-colors text-center text-sm"
+            onClick={async (e) => {
+              e.preventDefault();
+              try {
+                await incrementRegistrationClicks(event.id);
+              } catch (err) {
+                // Optionally handle error
+              }
+              window.open(event.registrationUrl, '_blank', 'noopener,noreferrer');
+            }}
           >
             Register
           </a>
