@@ -187,15 +187,18 @@ const Footer: React.FC = () => {
           <div className="sm:col-span-2">
             <div className="bg-white/30 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-accent-black/10 hover:shadow-lg transition-all duration-300 transform hover:scale-[1.02]">
               <div className="flex items-center group mb-4">
-                <img 
-                  src="/loopin-logo.svg" 
-                  alt="Loopin Logo" 
-                  className="h-16 w-auto sm:h-20 transition-transform duration-300 group-hover:rotate-3" 
-                  loading="lazy"
-                />
-                <span className="ml-3 text-xl sm:text-2xl font-extrabold font-mono text-accent-black group-hover:underline transition-all duration-200" style={{ fontFamily: 'Urbanist, Inter, Space Grotesk, Arial, sans-serif' }}>
-                  Loopin
-                </span>
+                <Link 
+                  to="/" 
+                  className="flex items-center group transform-gpu hover:scale-105 transition-transform duration-300"
+                  onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                >
+                  <img 
+                    src="/new-logos/Secondary Logo svg.svg" 
+                    alt="Loopin Logo" 
+                    className="h-14 w-auto sm:h-18 transition-transform duration-300" 
+                    loading="lazy"
+                  />
+                </Link>
               </div>
               <p className="text-accent-black text-sm font-mono leading-relaxed mb-4 max-w-md">
                 Discover, share, and join the best tech events happening in your city. Stay connected with your local tech community and never miss what's happening around you.

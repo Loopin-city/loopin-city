@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { CalendarCheck, Calendar, MapPin, Users } from 'lucide-react';
+<<<<<<< HEAD
+=======
+import { useLocation as useRouterLocation } from 'react-router-dom';
+>>>>>>> f5ddf6c4ba4d5e0cf8d2b35165eb3b9586ca32e9
 import Layout from '../components/layout/Layout';
 import EventList from '../components/events/EventList';
 import EventFilters from '../components/events/EventFilters';
@@ -87,9 +91,26 @@ const HomePage: React.FC = () => {
       }
     };
 
-    fetchEvents();
-    fetchArchivedEvents();
+    if (selectedCity) {
+      fetchEvents();
+      fetchArchivedEvents();
+    }
   }, [selectedCity]);
+
+  // Handle scroll to hero when redirected from city selection
+  useEffect(() => {
+    if (location.state?.scrollToHero) {
+      setTimeout(() => {
+        const heroSection = document.getElementById('hero-section');
+        if (heroSection) {
+          heroSection.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start' 
+          });
+        }
+      }, 100);
+    }
+  }, [location.state]);
 
   // Filter logic for upcoming events
   const filteredUpcomingEvents = events.filter(event => {

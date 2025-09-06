@@ -195,17 +195,11 @@ const Header: React.FC = () => {
                 closeMenu();
               }}
             >
-              <img 
-                src="/loopin-logo.svg" 
-                alt="Loopin Logo" 
-                className="h-16 sm:h-20 w-auto transition-transform duration-300 group-hover:rotate-3" 
-              />
-              <span 
-                className="ml-2 sm:ml-3 text-xl sm:text-2xl font-extrabold text-accent-black group-hover:underline transition-all duration-300 flex items-center" 
-                style={{ fontFamily: 'Urbanist, Inter, Space Grotesk, Arial, sans-serif', lineHeight: 1 }}
-              >
-                Loopin
-              </span>
+                              <img 
+                  src="/new-logos/Secondary Logo svg.svg" 
+                  alt="Loopin Logo" 
+                  className="h-12 sm:h-14 w-auto transition-transform duration-300" 
+                />
             </Link>
           </div>
 
