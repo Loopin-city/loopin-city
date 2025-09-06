@@ -180,7 +180,6 @@ const HomePage: React.FC = () => {
   return (
     <Layout>
       <div
-        id="hero-section"
         className="min-h-screen flex flex-col justify-center items-center relative px-4 hero-bg"
         style={{
           backgroundImage: "url('/Contour Line.svg')",
