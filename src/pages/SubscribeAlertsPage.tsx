@@ -5,7 +5,7 @@ import { Mail, Clock, MapPin, Bell } from 'lucide-react';
 import { useLocation } from '../contexts/LocationContext';
 import { useEffect } from 'react';
 import { getCities } from '../api/cities';
-import { subscribeToEventAlerts } from '../api/alerts';
+import { subscribeToEventAlerts, unsubscribeFromEventAlerts } from '../api/alerts';
 
 
 const AnimatedClock: React.FC = () => {
@@ -225,6 +225,14 @@ const SubscribeAlertsPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  
+  // Unsubscribe state
+  const [unsubscribeEmail, setUnsubscribeEmail] = useState('');
+  const [unsubscribeCity, setUnsubscribeCity] = useState<City | null>(null);
+  const [unsubscribeSearch, setUnsubscribeSearch] = useState('');
+  const [unsubscribeLoading, setUnsubscribeLoading] = useState(false);
+  const [unsubscribeSuccess, setUnsubscribeSuccess] = useState(false);
+  const [unsubscribeError, setUnsubscribeError] = useState('');
 
   useEffect(() => {
     // Fetch cities from the backend
@@ -276,76 +284,203 @@ const SubscribeAlertsPage: React.FC = () => {
     }
   };
 
+  // Unsubscribe handlers
+  const handleUnsubscribeCitySelect = (city: City) => {
+    setUnsubscribeCity(city);
+    setUnsubscribeSearch('');
+  };
+
+  const handleUnsubscribeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setUnsubscribeError('');
+    setUnsubscribeSuccess(false);
+    
+    if (!unsubscribeEmail.match(/^[^@\s]+@[^@\s]+\.[^@\s]+$/)) {
+      setUnsubscribeError('Please enter a valid email address.');
+      return;
+    }
+    if (!unsubscribeCity) {
+      setUnsubscribeError('Please select a city to unsubscribe from.');
+      return;
+    }
+    
+    setUnsubscribeLoading(true);
+    try {
+      await unsubscribeFromEventAlerts(unsubscribeEmail, unsubscribeCity.id);
+      setUnsubscribeSuccess(true);
+      setUnsubscribeEmail('');
+      setUnsubscribeCity(null);
+      setUnsubscribeSearch('');
+    } catch (e) {
+      console.error('Unsubscribe error:', e);
+      setUnsubscribeError('Failed to unsubscribe. Please try again.');
+    } finally {
+      setUnsubscribeLoading(false);
+    }
+  };
+
+  const filteredUnsubscribeCities = cities.filter(city =>
+    city.name.toLowerCase().includes(unsubscribeSearch.toLowerCase()) &&
+    city.id !== unsubscribeCity?.id
+  );
+
   return (
     <Layout>
       <div className="min-h-screen flex flex-col items-center justify-center py-12 px-4 bg-accent-cream" style={{ backgroundColor: '#fef3c7' }}>
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-10 max-w-md w-full flex flex-col items-center text-center">
-          <h1 className="text-2xl font-bold text-accent-black mb-3 flex items-center gap-2">
-            <Mail className="h-6 w-6 text-yellow-400" /> 
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-10 max-w-2xl w-full">
+          <h1 className="text-3xl font-bold text-accent-black mb-8 flex items-center justify-center gap-2">
+            <Mail className="h-8 w-8 text-yellow-400" /> 
             Event Alerts
           </h1>
-          <form onSubmit={handleSubmit} className="w-full space-y-6 mt-4">
-            <div className="text-left">
-              <label className="block font-semibold mb-1">Email</label>
-              <input
-                type="email"
-                className="w-full border rounded px-3 py-2"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                required
-                placeholder="you@email.com"
+          
+          {/* Subscribe Section */}
+          <div className="mb-12">
+            <h2 className="text-xl font-semibold text-gray-800 mb-6 flex items-center gap-2">
+              <Bell className="h-5 w-5 text-green-500" />
+              Subscribe to Event Alerts
+            </h2>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="text-left">
+                <label className="block font-semibold mb-1">Email</label>
+                <input
+                  type="email"
+                  className="w-full border rounded px-3 py-2"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  required
+                  placeholder="you@email.com"
+                  disabled={loading}
+                />
+              </div>
+              <div className="text-left">
+                <label className="block font-semibold mb-1">Select Cities</label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {selectedCities.map(city => (
+                    <span key={city.id} className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full flex items-center gap-2">
+                      {city.name}
+                      <button type="button" className="ml-1 text-yellow-600 hover:text-red-500" onClick={() => handleRemoveCity(city.id)}>&times;</button>
+                    </span>
+                  ))}
+                </div>
+                <input
+                  type="text"
+                  className="w-full border rounded px-3 py-2 mb-2"
+                  placeholder="Search cities..."
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  disabled={loading}
+                />
+                <div className="max-h-40 overflow-y-auto border rounded bg-white shadow-sm">
+                  {filteredCities.length === 0 ? (
+                    <div className="p-2 text-gray-400 text-sm">No cities found</div>
+                  ) : filteredCities.map(city => (
+                    <button
+                      type="button"
+                      key={city.id}
+                      className="block w-full text-left px-3 py-2 hover:bg-yellow-100"
+                      onClick={() => handleSelectCity(city)}
+                      disabled={loading}
+                    >
+                      {city.name} <span className="text-xs text-gray-400">({city.state})</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {error && <div className="text-red-600 text-sm">{error}</div>}
+              {success && (
+                <div className="text-green-600 text-sm bg-green-50 border border-green-200 rounded-lg p-3">
+                  <div className="font-semibold mb-1">✅ Subscribed Successfully!</div>
+                  <div>You'll receive email alerts for new events in your selected cities.</div>
+                </div>
+              )}
+              <button
+                type="submit"
+                className="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-bold py-2 rounded"
                 disabled={loading}
-              />
-            </div>
-            <div className="text-left">
-              <label className="block font-semibold mb-1">Select Cities</label>
-              <div className="flex flex-wrap gap-2 mb-2">
-                {selectedCities.map(city => (
-                  <span key={city.id} className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full flex items-center gap-2">
-                    {city.name}
-                    <button type="button" className="ml-1 text-yellow-600 hover:text-red-500" onClick={() => handleRemoveCity(city.id)}>&times;</button>
-                  </span>
-                ))}
+              >
+                {loading ? 'Subscribing...' : 'Subscribe'}
+              </button>
+            </form>
+          </div>
+
+          {/* Divider */}
+          <div className="border-t border-gray-200 my-8"></div>
+
+          {/* Unsubscribe Section */}
+          <div>
+            <h2 className="text-xl font-semibold text-gray-800 mb-6 flex items-center gap-2">
+              <Mail className="h-5 w-5 text-red-500" />
+              Unsubscribe from Event Alerts
+            </h2>
+            <form onSubmit={handleUnsubscribeSubmit} className="space-y-6">
+              <div className="text-left">
+                <label className="block font-semibold mb-1">Email</label>
+                <input
+                  type="email"
+                  className="w-full border rounded px-3 py-2"
+                  value={unsubscribeEmail}
+                  onChange={e => setUnsubscribeEmail(e.target.value)}
+                  required
+                  placeholder="you@email.com"
+                  disabled={unsubscribeLoading}
+                />
               </div>
-              <input
-                type="text"
-                className="w-full border rounded px-3 py-2 mb-2"
-                placeholder="Search cities..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                disabled={loading}
-              />
-              <div className="max-h-40 overflow-y-auto border rounded bg-white shadow-sm">
-                {filteredCities.length === 0 ? (
-                  <div className="p-2 text-gray-400 text-sm">No cities found</div>
-                ) : filteredCities.map(city => (
-                  <button
-                    type="button"
-                    key={city.id}
-                    className="block w-full text-left px-3 py-2 hover:bg-yellow-100"
-                    onClick={() => handleSelectCity(city)}
-                    disabled={loading}
-                  >
-                    {city.name} <span className="text-xs text-gray-400">({city.state})</span>
-                  </button>
-                ))}
+              <div className="text-left">
+                <label className="block font-semibold mb-1">Select City to Unsubscribe From</label>
+                {unsubscribeCity && (
+                  <div className="mb-2">
+                    <span className="bg-red-100 text-red-800 px-3 py-1 rounded-full flex items-center gap-2 inline-block">
+                      {unsubscribeCity.name}
+                      <button 
+                        type="button" 
+                        className="ml-1 text-red-600 hover:text-red-800" 
+                        onClick={() => setUnsubscribeCity(null)}
+                      >
+                        &times;
+                      </button>
+                    </span>
+                  </div>
+                )}
+                <input
+                  type="text"
+                  className="w-full border rounded px-3 py-2 mb-2"
+                  placeholder="Search cities..."
+                  value={unsubscribeSearch}
+                  onChange={e => setUnsubscribeSearch(e.target.value)}
+                  disabled={unsubscribeLoading}
+                />
+                <div className="max-h-40 overflow-y-auto border rounded bg-white shadow-sm">
+                  {filteredUnsubscribeCities.length === 0 ? (
+                    <div className="p-2 text-gray-400 text-sm">No cities found</div>
+                  ) : filteredUnsubscribeCities.map(city => (
+                    <button
+                      type="button"
+                      key={city.id}
+                      className="block w-full text-left px-3 py-2 hover:bg-red-100"
+                      onClick={() => handleUnsubscribeCitySelect(city)}
+                      disabled={unsubscribeLoading}
+                    >
+                      {city.name} <span className="text-xs text-gray-400">({city.state})</span>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-            {error && <div className="text-red-600 text-sm">{error}</div>}
-            {success && (
-              <div className="text-green-600 text-sm bg-green-50 border border-green-200 rounded-lg p-3">
-                <div className="font-semibold mb-1">✅ Subscribed Successfully!</div>
-                <div>You'll receive email alerts for new events in your selected cities.</div>
-              </div>
-            )}
-            <button
-              type="submit"
-              className="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-bold py-2 rounded"
-              disabled={loading}
-            >
-              {loading ? 'Subscribing...' : 'Subscribe'}
-            </button>
-          </form>
+              {unsubscribeError && <div className="text-red-600 text-sm">{unsubscribeError}</div>}
+              {unsubscribeSuccess && (
+                <div className="text-green-600 text-sm bg-green-50 border border-green-200 rounded-lg p-3">
+                  <div className="font-semibold mb-1">✅ Unsubscribed Successfully!</div>
+                  <div>You will no longer receive email alerts for events in {unsubscribeCity?.name}.</div>
+                </div>
+              )}
+              <button
+                type="submit"
+                className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-2 rounded"
+                disabled={unsubscribeLoading}
+              >
+                {unsubscribeLoading ? 'Unsubscribing...' : 'Unsubscribe'}
+              </button>
+            </form>
+          </div>
         </div>
       </div>
     </Layout>

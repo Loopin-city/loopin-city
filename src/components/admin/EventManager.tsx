@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../../utils/supabase';
+import { supabase, incrementCommunityEventCount, incrementVenueEventCount, decrementCommunityEventCount, decrementVenueEventCount } from '../../utils/supabase';
 
 interface Event {
   id: string;
@@ -104,6 +104,16 @@ const EventManager: React.FC = () => {
   const updateEventStatus = async (eventId: string, status: string) => {
     setProcessing(true);
     try {
+      // First, get the current event to check if we need to update counts
+      const { data: currentEvent, error: fetchError } = await supabase
+        .from('events')
+        .select('community_id, venue_id, status')
+        .eq('id', eventId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Update the event status
       const { error } = await supabase
         .from('events')
         .update({ 
@@ -113,6 +123,46 @@ const EventManager: React.FC = () => {
         .eq('id', eventId);
 
       if (error) throw error;
+
+      // If event is being approved and wasn't approved before, increment counts
+      if (status === 'approved' && currentEvent.status !== 'approved') {
+        try {
+          // Increment community event count
+          if (currentEvent.community_id) {
+            await incrementCommunityEventCount(currentEvent.community_id);
+            console.log(`✅ Incremented event count for community ${currentEvent.community_id}`);
+          }
+          
+          // Increment venue event count
+          if (currentEvent.venue_id) {
+            await incrementVenueEventCount(currentEvent.venue_id);
+            console.log(`✅ Incremented event count for venue ${currentEvent.venue_id}`);
+          }
+        } catch (countError) {
+          console.error('Error updating event counts:', countError);
+          // Don't fail the status update if count update fails
+        }
+      }
+      
+      // If event is being rejected/cancelled and was previously approved, decrement counts
+      if ((status === 'rejected' || status === 'cancelled') && currentEvent.status === 'approved') {
+        try {
+          // Decrement community event count
+          if (currentEvent.community_id) {
+            await decrementCommunityEventCount(currentEvent.community_id);
+            console.log(`✅ Decremented event count for community ${currentEvent.community_id}`);
+          }
+          
+          // Decrement venue event count
+          if (currentEvent.venue_id) {
+            await decrementVenueEventCount(currentEvent.venue_id);
+            console.log(`✅ Decremented event count for venue ${currentEvent.venue_id}`);
+          }
+        } catch (countError) {
+          console.error('Error updating event counts:', countError);
+          // Don't fail the status update if count update fails
+        }
+      }
       
       await fetchEvents();
       setSelectedEvent(null);
@@ -132,12 +182,42 @@ const EventManager: React.FC = () => {
 
     setProcessing(true);
     try {
+      // First, get the current event to check if we need to decrement counts
+      const { data: currentEvent, error: fetchError } = await supabase
+        .from('events')
+        .select('community_id, venue_id, status')
+        .eq('id', eventId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Delete the event
       const { error } = await supabase
         .from('events')
         .delete()
         .eq('id', eventId);
 
       if (error) throw error;
+
+      // If the event was approved, decrement counts
+      if (currentEvent.status === 'approved') {
+        try {
+          // Decrement community event count
+          if (currentEvent.community_id) {
+            await decrementCommunityEventCount(currentEvent.community_id);
+            console.log(`✅ Decremented event count for community ${currentEvent.community_id}`);
+          }
+          
+          // Decrement venue event count
+          if (currentEvent.venue_id) {
+            await decrementVenueEventCount(currentEvent.venue_id);
+            console.log(`✅ Decremented event count for venue ${currentEvent.venue_id}`);
+          }
+        } catch (countError) {
+          console.error('Error updating event counts:', countError);
+          // Don't fail the deletion if count update fails
+        }
+      }
 
       await fetchEvents();
       setSelectedEvent(null);

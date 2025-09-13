@@ -460,6 +460,30 @@ export async function incrementVenueEventCount(venueId: string) {
   }
 }
 
+export async function decrementCommunityEventCount(communityId: string) {
+  try {
+    const { error } = await supabase
+      .rpc('decrement_community_event_count', { community_id: communityId });
+
+    if (error) throw error;
+  } catch (error) {
+    console.error('Error decrementing community event count:', error);
+    throw error;
+  }
+}
+
+export async function decrementVenueEventCount(venueId: string) {
+  try {
+    const { error } = await supabase
+      .rpc('decrement_venue_event_count', { venue_id: venueId });
+
+    if (error) throw error;
+  } catch (error) {
+    console.error('Error decrementing venue event count:', error);
+    throw error;
+  }
+}
+
 
 
 
