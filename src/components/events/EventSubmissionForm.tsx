@@ -157,6 +157,7 @@ const EventSubmissionForm: React.FC = () => {
     venue: '',
     isOnline: false,
     eventType: 'Meetup' as EventType,
+    organizerName: '',
     organizerEmail: '',
     organizerPhone: '',
     eventUrl: '',
@@ -197,13 +198,15 @@ const EventSubmissionForm: React.FC = () => {
     description: { required: true, minLength: 20, maxLength: 500 },
     date: { required: true },
     endDate: { required: true },
+    organizerName: { required: true, minLength: 2, maxLength: 100 },
     organizerEmail: { required: true, pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ },
     organizerPhone: { required: true, pattern: /^[\+]?[1-9][\d]{0,15}$/ },
     eventUrl: { required: true, pattern: /^https?:\/\/.+/ },
-    communityName: { required: true, minLength: 2, maxLength: 100 },
-    communityWebsite: { required: true, pattern: /^https?:\/\/.+/ },
-    communitySize: { required: true, min: 1, max: 1000000 },
-    communityYearFounded: { required: true, min: 1900, max: new Date().getFullYear() }
+    // Community fields are now conditionally required - only when community is selected or in new community mode
+    communityName: { required: false, minLength: 2, maxLength: 100 },
+    communityWebsite: { required: false, pattern: /^https?:\/\/.+/ },
+    communitySize: { required: false, min: 1, max: 1000000 },
+    communityYearFounded: { required: false, min: 1900, max: new Date().getFullYear() }
   };
   
   // Calculate form completion percentage - optimized to prevent focus loss
@@ -220,25 +223,30 @@ const EventSubmissionForm: React.FC = () => {
     
     // Count additional required fields
     let additionalCompletedFields = 0;
-    const totalAdditionalFields = 5; // banner, communityLogo, proofOfExistence, socialLinks, venue
+    let totalAdditionalFields = 2; // banner, venue (always required)
     
     // Check banner
     if (formData.banner) additionalCompletedFields++;
     
-    // Check community logo
-    if (formData.communityLogo) additionalCompletedFields++;
-    
-    // Check proof of existence
-    if (formData.proofOfExistence) additionalCompletedFields++;
-    
-    // Check social links (at least one non-empty link)
-    if (formData.communitySocialLinks && formData.communitySocialLinks.length > 0 && formData.communitySocialLinks[0].trim() !== '') {
-      additionalCompletedFields++;
-    }
-    
     // Check venue (required for offline events)
     if (formData.isOnline || (formData.venue && formData.venue.trim() !== '')) {
       additionalCompletedFields++;
+    }
+    
+    // Community fields are only required if a community is selected or in new community mode
+    if (selectedCommunity || isNewCommunityMode) {
+      totalAdditionalFields += 3; // communityLogo, proofOfExistence, socialLinks
+      
+      // Check community logo
+      if (formData.communityLogo) additionalCompletedFields++;
+      
+      // Check proof of existence
+      if (formData.proofOfExistence) additionalCompletedFields++;
+      
+      // Check social links (at least one non-empty link)
+      if (formData.communitySocialLinks && formData.communitySocialLinks.length > 0 && formData.communitySocialLinks[0].trim() !== '') {
+        additionalCompletedFields++;
+      }
     }
     
     const totalCompletedFields = basicCompletedFields + additionalCompletedFields;
@@ -274,6 +282,45 @@ const EventSubmissionForm: React.FC = () => {
   useEffect(() => {
     if (globalSelectedCity) setSelectedCity(globalSelectedCity);
   }, [globalSelectedCity]);
+
+  // Reset community selection when city changes
+  useEffect(() => {
+    if (selectedCity) {
+      // Reset community selection when city changes
+      setSelectedCommunity(null);
+      setIsNewCommunityMode(false);
+      
+      // Clear community-related form data
+      setFormData(prev => ({
+        ...prev,
+        communityName: '',
+        communityWebsite: '',
+        communitySocialLinks: [],
+        communitySize: '',
+        communityYearFounded: '',
+        communityPreviousEvents: [],
+      }));
+      
+      // Clear community-related errors
+      setFieldErrors(prev => {
+        const clearedErrors = { ...prev };
+        ['communityName', 'communityWebsite', 'communitySocialLinks', 'communitySize', 'communityYearFounded', 'communitySelection'].forEach(field => {
+          delete clearedErrors[field];
+        });
+        return clearedErrors;
+      });
+      
+      // Reset community-related touched states
+      setFieldTouched(prev => ({
+        ...prev,
+        communityName: false,
+        communityWebsite: false,
+        communitySocialLinks: false,
+        communitySize: false,
+        communityYearFounded: false,
+      }));
+    }
+  }, [selectedCity?.id]); // Only trigger when city ID changes
   
   const eventTypes: EventType[] = ['Hackathon', 'Workshop', 'Meetup', 'Talk', 'Conference', 'Other'];
   
@@ -345,14 +392,26 @@ const EventSubmissionForm: React.FC = () => {
       errors.venue = 'Venue is required for offline events';
     }
 
-    // Community selection validation
-    if (!selectedCommunity && !isNewCommunityMode) {
-      errors.communitySelection = 'Please select an existing community or choose to add a new one';
-    }
+    // Community selection validation - now optional
+    // Removed mandatory validation for community selection
 
-    // If in new community mode, ensure community name is not empty
-    if (isNewCommunityMode && (!formData.communityName || formData.communityName.trim() === '')) {
-      errors.communityName = 'Community name is required when adding a new community';
+    // Community fields are only required if a community is selected or in new community mode
+    if (selectedCommunity || isNewCommunityMode) {
+      if (!formData.communityName || formData.communityName.trim() === '') {
+        errors.communityName = 'Community name is required';
+      }
+      if (!formData.communityWebsite || formData.communityWebsite.trim() === '') {
+        errors.communityWebsite = 'Community website is required';
+      }
+      if (!formData.communitySize || formData.communitySize.trim() === '') {
+        errors.communitySize = 'Community size is required';
+      }
+      if (!formData.communityYearFounded || formData.communityYearFounded.trim() === '') {
+        errors.communityYearFounded = 'Year founded is required';
+      }
+      if (!formData.communitySocialLinks || formData.communitySocialLinks.length === 0 || formData.communitySocialLinks[0].trim() === '') {
+        errors.communitySocialLinks = 'At least one social media link is required';
+      }
     }
     
     setFieldErrors(errors);
@@ -413,7 +472,7 @@ const EventSubmissionForm: React.FC = () => {
         communitySize: community.size?.toString() || '',
         communityYearFounded: community.year_founded?.toString() || '',
         communityPreviousEvents: community.previous_events || [],
-              organizerEmail: community.contact_email || prev.organizerEmail,
+        organizerEmail: community.contact_email || prev.organizerEmail,
       }));
       
       // Mark fields as touched for validation
@@ -423,9 +482,9 @@ const EventSubmissionForm: React.FC = () => {
       });
       setFieldTouched(prev => ({ ...prev, ...touchedFields }));
       
-      // Clear errors for auto-filled fields
+      // Clear errors for auto-filled fields AND community selection error
       const clearedErrors = { ...fieldErrors };
-      ['communityName', 'communityWebsite', 'communitySocialLinks', 'communitySize', 'communityYearFounded'].forEach(field => {
+      ['communityName', 'communityWebsite', 'communitySocialLinks', 'communitySize', 'communityYearFounded', 'communitySelection'].forEach(field => {
         delete clearedErrors[field];
       });
       setFieldErrors(clearedErrors);
@@ -711,128 +770,165 @@ const EventSubmissionForm: React.FC = () => {
       
       let communityId = null;
       
-      console.log('🔍 Starting comprehensive duplicate detection for:', {
-        communityName: formData.communityName,
-        cityId: selectedCity.id,
-        website: formData.communityWebsite,
-        organizerEmail: formData.organizerEmail,
-        organizerPhone: formData.organizerPhone,
-        socialLinks: formData.communitySocialLinks
-      });
-      
-      
-      const { data: similarCommunities, error: similarCommunitiesError } = await supabase
-        .rpc('find_similar_communities_comprehensive', {
-          p_community_name: formData.communityName,
-          p_city_id: selectedCity.id,
-          p_website_url: formData.communityWebsite,
-          p_organizer_email: formData.organizerEmail,
-          p_organizer_phone: formData.organizerPhone,
-          p_social_links: formData.communitySocialLinks
+      // Only create/find community if one is selected or in new community mode
+      if (selectedCommunity || isNewCommunityMode) {
+        console.log('🔍 Starting comprehensive duplicate detection for:', {
+          communityName: formData.communityName,
+          cityId: selectedCity.id,
+          website: formData.communityWebsite,
+          organizerEmail: formData.organizerEmail,
+          organizerPhone: formData.organizerPhone,
+          socialLinks: formData.communitySocialLinks
         });
-
-      if (similarCommunitiesError) {
-        console.error('🚨 Comprehensive similarity check failed:', similarCommunitiesError);
-        console.warn('Comprehensive similarity check failed:', similarCommunitiesError);
+      
         
-        console.log('Falling back to basic duplicate detection...');
-      } else {
-        console.log('✅ Duplicate detection function executed successfully');
-        console.log('📊 Similar communities found:', similarCommunities?.length || 0);
+        const { data: similarCommunities, error: similarCommunitiesError } = await supabase
+          .rpc('find_similar_communities_comprehensive', {
+            p_community_name: formData.communityName,
+            p_city_id: selectedCity.id,
+            p_website_url: formData.communityWebsite,
+            p_organizer_email: formData.organizerEmail,
+            p_organizer_phone: formData.organizerPhone,
+            p_social_links: formData.communitySocialLinks
+          });
+
+        if (similarCommunitiesError) {
+          console.error('🚨 Comprehensive similarity check failed:', similarCommunitiesError);
+          console.warn('Comprehensive similarity check failed:', similarCommunitiesError);
+          
+          console.log('Falling back to basic duplicate detection...');
+        } else {
+          console.log('✅ Duplicate detection function executed successfully');
+          console.log('📊 Similar communities found:', similarCommunities?.length || 0);
+          if (similarCommunities && similarCommunities.length > 0) {
+            console.log('📋 Full similarity results:', similarCommunities);
+          }
+        }
+
+        
         if (similarCommunities && similarCommunities.length > 0) {
-          console.log('📋 Full similarity results:', similarCommunities);
-        }
-      }
-
-      
-      if (similarCommunities && similarCommunities.length > 0) {
-        const bestMatch = similarCommunities[0];
-        console.log('🎯 Comprehensive similarity analysis:', {
-          community: bestMatch.name,
-          score: bestMatch.similarity_score,
-          breakdown: bestMatch.score_breakdown
-        });
-        
-        if (bestMatch.similarity_score >= 90) {
+          const bestMatch = similarCommunities[0];
+          console.log('🎯 Comprehensive similarity analysis:', {
+            community: bestMatch.name,
+            score: bestMatch.similarity_score,
+            breakdown: bestMatch.score_breakdown
+          });
           
-          communityId = bestMatch.id;
-          console.log(`🔗 High confidence match (${bestMatch.similarity_score}%): Reusing existing community "${bestMatch.name}"`);
-        } else if (bestMatch.similarity_score >= 70) {
-          
-          console.log(`⚠️ Medium confidence match (${bestMatch.similarity_score}%): Creating new community but flagging for admin review`);
-          console.log('📈 Score breakdown:', bestMatch.score_breakdown);
+          if (bestMatch.similarity_score >= 90) {
+            
+            communityId = bestMatch.id;
+            console.log(`🔗 High confidence match (${bestMatch.similarity_score}%): Reusing existing community "${bestMatch.name}"`);
+          } else if (bestMatch.similarity_score >= 70) {
+            
+            console.log(`⚠️ Medium confidence match (${bestMatch.similarity_score}%): Creating new community but flagging for admin review`);
+            console.log('📈 Score breakdown:', bestMatch.score_breakdown);
+          } else {
+            console.log(`✨ Low confidence match (${bestMatch.similarity_score}%): Creating new community`);
+          }
         } else {
-          console.log(`✨ Low confidence match (${bestMatch.similarity_score}%): Creating new community`);
+          console.log('🆕 No similar communities found - will create new community');
         }
-      } else {
-        console.log('🆕 No similar communities found - will create new community');
-      }
 
-      
-      if (!communityId) {
         
-        const { data: approvedCommunity, error: approvedCommunityError } = await supabase
-          .from('communities')
-          .select('id')
-          .eq('name', formData.communityName)
-          .eq('city_id', selectedCity.id)
-          .eq('verification_status', 'approved')
-          .maybeSingle();
-
-        if (approvedCommunityError) {
-          throw new Error(`Error checking approved community: ${approvedCommunityError.message}`);
-        }
-
-        if (approvedCommunity) {
+        if (!communityId) {
           
-          communityId = approvedCommunity.id;
-        } else {
-          
-          const { data: pendingCommunity, error: pendingCommunityError } = await supabase
+          const { data: approvedCommunity, error: approvedCommunityError } = await supabase
             .from('communities')
             .select('id')
             .eq('name', formData.communityName)
             .eq('city_id', selectedCity.id)
-            .eq('verification_status', 'pending')
+            .eq('verification_status', 'approved')
             .maybeSingle();
 
-          if (pendingCommunityError) {
-            throw new Error(`Error checking pending community: ${pendingCommunityError.message}`);
+          if (approvedCommunityError) {
+            throw new Error(`Error checking approved community: ${approvedCommunityError.message}`);
           }
 
-          if (pendingCommunity) {
+          if (approvedCommunity) {
             
-            communityId = pendingCommunity.id;
+            communityId = approvedCommunity.id;
           } else {
             
-            const { data: newCommunity, error: communityError } = await supabase
+            const { data: pendingCommunity, error: pendingCommunityError } = await supabase
               .from('communities')
-              .insert({
-                name: formData.communityName,
-                logo: logoUrl,
-                website: formData.communityWebsite,
-                social_links: formData.communitySocialLinks,
-                proof_of_existence: proofUrl,
-                size: formData.communitySize ? parseInt(formData.communitySize) : null,
-                                  year_founded: formData.communityYearFounded ? parseInt(formData.communityYearFounded) : null,
-                                  previous_events: formData.communityPreviousEvents,
-                verification_status: 'pending',
-                city_id: selectedCity.id,
-              })
-              .select()
-              .single();
+              .select('id')
+              .eq('name', formData.communityName)
+              .eq('city_id', selectedCity.id)
+              .eq('verification_status', 'pending')
+              .maybeSingle();
 
-            if (communityError) {
-              throw new Error(`Failed to create community: ${communityError.message}`);
+            if (pendingCommunityError) {
+              throw new Error(`Error checking pending community: ${pendingCommunityError.message}`);
             }
 
-            if (!newCommunity) {
-              throw new Error('Failed to create community: No data returned');
-            }
+            if (pendingCommunity) {
+              
+              communityId = pendingCommunity.id;
+            } else {
+              
+              const { data: newCommunity, error: communityError } = await supabase
+                .from('communities')
+                .insert({
+                  name: formData.communityName,
+                  logo: logoUrl,
+                  website: formData.communityWebsite,
+                  social_links: formData.communitySocialLinks,
+                  proof_of_existence: proofUrl,
+                  size: formData.communitySize ? parseInt(formData.communitySize) : null,
+                                    year_founded: formData.communityYearFounded ? parseInt(formData.communityYearFounded) : null,
+                                    previous_events: formData.communityPreviousEvents,
+                  verification_status: 'pending',
+                  city_id: selectedCity.id,
+                })
+                .select()
+                .single();
 
-            communityId = newCommunity.id;
+              if (communityError) {
+                throw new Error(`Failed to create community: ${communityError.message}`);
+              }
+
+              if (!newCommunity) {
+                throw new Error('Failed to create community: No data returned');
+              }
+
+              communityId = newCommunity.id;
+            }
           }
         }
+        
+        // Log admin duplicate analysis only if community was created/found
+        if (similarCommunities && similarCommunities.length > 0) {
+          const bestMatch = similarCommunities[0];
+          if (bestMatch.similarity_score >= 70 && bestMatch.similarity_score < 90) {
+            try {
+              await supabase
+                .from('admin_community_duplicates')
+                .insert({
+                  original_community_id: communityId,
+                  original_community_name: formData.communityName,
+                  duplicate_community_id: bestMatch.id,
+                  duplicate_community_name: bestMatch.name,
+                  similarity_score: bestMatch.similarity_score,
+                  detection_method: 'comprehensive_analysis',
+                  website_match: bestMatch.score_breakdown?.website_score === 100,
+                  city_id: selectedCity.id,
+                  
+                  score_breakdown: bestMatch.score_breakdown,
+                  organizer_email_match: bestMatch.score_breakdown?.contact_score >= 80,
+                  organizer_phone_match: bestMatch.score_breakdown?.contact_score === 100,
+                  social_media_match: bestMatch.score_breakdown?.social_score === 100,
+                  admin_notes: `Comprehensive analysis: Name(${bestMatch.score_breakdown?.name_score}%), Location(${bestMatch.score_breakdown?.location_score}%), Website(${bestMatch.score_breakdown?.website_score}%), Contact(${bestMatch.score_breakdown?.contact_score}%), Social(${bestMatch.score_breakdown?.social_score}%) = ${bestMatch.similarity_score}% total`
+                });
+              console.log(`Logged comprehensive duplicate analysis for admin review: ${formData.communityName} vs ${bestMatch.name}`);
+              console.log('Full breakdown stored in score_breakdown column');
+            } catch (adminLogError) {
+              console.warn('Failed to log comprehensive duplicate for admin review:', adminLogError);
+              
+            }
+          }
+        }
+      } else {
+        console.log('📝 No community selected - event will be created without community association');
       }
 
       
@@ -917,37 +1013,6 @@ const EventSubmissionForm: React.FC = () => {
         }
       }
 
-      
-      if (similarCommunities && similarCommunities.length > 0) {
-        const bestMatch = similarCommunities[0];
-        if (bestMatch.similarity_score >= 70 && bestMatch.similarity_score < 90) {
-          try {
-            await supabase
-              .from('admin_community_duplicates')
-              .insert({
-                original_community_id: communityId,
-                original_community_name: formData.communityName,
-                duplicate_community_id: bestMatch.id,
-                duplicate_community_name: bestMatch.name,
-                similarity_score: bestMatch.similarity_score,
-                detection_method: 'comprehensive_analysis',
-                website_match: bestMatch.score_breakdown?.website_score === 100,
-                city_id: selectedCity.id,
-                
-                score_breakdown: bestMatch.score_breakdown,
-                organizer_email_match: bestMatch.score_breakdown?.contact_score >= 80,
-                organizer_phone_match: bestMatch.score_breakdown?.contact_score === 100,
-                social_media_match: bestMatch.score_breakdown?.social_score === 100,
-                admin_notes: `Comprehensive analysis: Name(${bestMatch.score_breakdown?.name_score}%), Location(${bestMatch.score_breakdown?.location_score}%), Website(${bestMatch.score_breakdown?.website_score}%), Contact(${bestMatch.score_breakdown?.contact_score}%), Social(${bestMatch.score_breakdown?.social_score}%) = ${bestMatch.similarity_score}% total`
-              });
-            console.log(`Logged comprehensive duplicate analysis for admin review: ${formData.communityName} vs ${bestMatch.name}`);
-            console.log('Full breakdown stored in score_breakdown column');
-          } catch (adminLogError) {
-            console.warn('Failed to log comprehensive duplicate for admin review:', adminLogError);
-            
-          }
-        }
-      }
 
       setSubmitSuccess(true);
     } catch (error) {
@@ -1191,13 +1256,17 @@ const EventSubmissionForm: React.FC = () => {
           
           // Check additional required fields
           if (!formData.banner) missingFields.push('Event Banner');
-          if (!formData.communityLogo) missingFields.push('Community Logo');
-          if (!formData.proofOfExistence) missingFields.push('Proof of Existence');
-          if (!formData.communitySocialLinks || formData.communitySocialLinks.length === 0 || formData.communitySocialLinks[0].trim() === '') {
-            missingFields.push('Social Media Links');
-          }
           if (!formData.isOnline && (!formData.venue || formData.venue.trim() === '')) {
             missingFields.push('Venue (for offline events)');
+          }
+          
+          // Community fields are only required if a community is selected or in new community mode
+          if (selectedCommunity || isNewCommunityMode) {
+            if (!formData.communityLogo) missingFields.push('Community Logo');
+            if (!formData.proofOfExistence) missingFields.push('Proof of Existence');
+            if (!formData.communitySocialLinks || formData.communitySocialLinks.length === 0 || formData.communitySocialLinks[0].trim() === '') {
+              missingFields.push('Social Media Links');
+            }
           }
           
           if (missingFields.length > 0) {
@@ -1628,19 +1697,44 @@ const EventSubmissionForm: React.FC = () => {
       <div className="bg-gray-50 p-4 rounded-lg mb-6">
         <h3 className="text-lg font-medium text-gray-900 mb-2">Organizer Contact Information</h3>
         <div className="space-y-4">
-            <FormField
-              name="organizerPhone"
-              label="Phone Number"
-              type="tel"
-              required
-              placeholder="+91 98765 43210"
-              value={formData.organizerPhone}
-              onChange={handleChange}
-              onBlur={handleBlur}
-              fieldErrors={fieldErrors}
-              fieldTouched={fieldTouched}
-              formData={formData}
-            />
+          <FormField
+            name="organizerName"
+            label="Organizer Name"
+            required
+            placeholder="Enter your full name"
+            value={formData.organizerName}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            fieldErrors={fieldErrors}
+            fieldTouched={fieldTouched}
+            formData={formData}
+          />
+          <FormField
+            name="organizerEmail"
+            label="Email Address"
+            type="email"
+            required
+            placeholder="your.email@example.com"
+            value={formData.organizerEmail}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            fieldErrors={fieldErrors}
+            fieldTouched={fieldTouched}
+            formData={formData}
+          />
+          <FormField
+            name="organizerPhone"
+            label="Phone Number"
+            type="tel"
+            required
+            placeholder="+91 98765 43210"
+            value={formData.organizerPhone}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            fieldErrors={fieldErrors}
+            fieldTouched={fieldTouched}
+            formData={formData}
+          />
           
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <div className="flex items-start gap-3">
@@ -1650,9 +1744,9 @@ const EventSubmissionForm: React.FC = () => {
               <div className="text-sm text-blue-800">
                 <p className="font-medium mb-1">About Organizer Information:</p>
                 <ul className="space-y-1 text-blue-700">
-                  <li>• Your name and email are now part of the community information section above</li>
-                  <li>• Phone number is still required for event coordination</li>
+                  <li>• Your contact information is required for event coordination</li>
                   <li>• If using an existing community, you can still edit organizer details if they differ from community contact</li>
+                  <li>• This information will be used for event verification and communication</li>
                 </ul>
               </div>
             </div>

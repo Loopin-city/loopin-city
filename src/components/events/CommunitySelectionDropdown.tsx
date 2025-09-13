@@ -124,7 +124,7 @@ const CommunitySelectionDropdown: React.FC<CommunitySelectionDropdownProps> = ({
     <div className={`relative ${className}`} ref={dropdownRef}>
       <label className="form-label flex items-center gap-2">
         Community Selection
-        <span className="text-red-500">*</span>
+        <span className="text-gray-500 text-sm">(Optional)</span>
         {selectedCommunity && (
           <span className="flex items-center gap-1 text-sm text-gray-500">
             <Lock className="h-3 w-3" />
@@ -297,7 +297,7 @@ const CommunitySelectionDropdown: React.FC<CommunitySelectionDropdownProps> = ({
           ? 'Please select a city first to view available communities.'
           : selectedCommunity 
             ? 'Community details will be auto-filled and locked. Select "+ Add New Community" to create a new one.'
-            : 'Choose an existing community to auto-fill details, or add a new one if your community isn\'t listed.'
+            : 'Choose an existing community to auto-fill details, or add a new one if your community isn\'t listed. This field is optional.'
         }
       </p>
     </div>
