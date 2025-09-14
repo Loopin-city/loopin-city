@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getCities, addCity, updateCity, deleteCity } from '../api/cities';
 import { getAllCommunities, updateCommunity, approveCommunity, rejectCommunity, deleteCommunity, transferCommunityEvents } from '../api/communities';
 import { getVenues, createVenue, updateVenue, deleteVenue, findOrCreateVenue } from '../api/venues';
-import { incrementCommunityEventCount, decrementCommunityEventCount, incrementVenueEventCount, decrementVenueEventCount } from '../utils/supabase';
+
 import { getAllEvents, updateEvent, approveEvent, rejectEvent, getArchivedEvents, archiveExpiredEvents, updateArchivedEvent, archiveSingleEvent } from '../api/events';
 import { 
   getAllSubscriptions, 
@@ -585,49 +585,7 @@ const AdminPanelPage: React.FC = () => {
     }
   };
 
-  const handleIncrementCommunityCount = async (communityId: string) => {
-    try {
-      await incrementCommunityEventCount(communityId);
-      setCommunitySuccess('Event count incremented successfully');
-      fetchCommunities();
-    } catch (error) {
-      console.error('Failed to increment community event count:', error);
-      setCommunityError('Failed to increment event count');
-    }
-  };
 
-  const handleDecrementCommunityCount = async (communityId: string) => {
-    try {
-      await decrementCommunityEventCount(communityId);
-      setCommunitySuccess('Event count decremented successfully');
-      fetchCommunities();
-    } catch (error) {
-      console.error('Failed to decrement community event count:', error);
-      setCommunityError('Failed to decrement event count');
-    }
-  };
-
-  const handleIncrementVenueCount = async (venueId: string) => {
-    try {
-      await incrementVenueEventCount(venueId);
-      setVenueSuccess('Event count incremented successfully');
-      fetchVenuesList();
-    } catch (error) {
-      console.error('Failed to increment venue event count:', error);
-      setVenueError('Failed to increment event count');
-    }
-  };
-
-  const handleDecrementVenueCount = async (venueId: string) => {
-    try {
-      await decrementVenueEventCount(venueId);
-      setVenueSuccess('Event count decremented successfully');
-      fetchVenuesList();
-    } catch (error) {
-      console.error('Failed to decrement venue event count:', error);
-      setVenueError('Failed to decrement event count');
-    }
-  };
 
   const openTransferModal = (community: Community) => {
     setTransferFromCommunity(community);
@@ -1135,22 +1093,7 @@ const AdminPanelPage: React.FC = () => {
                   </div>
                 </td>
                 <td className="px-4 py-2 text-center">
-                  <div className="flex items-center justify-center gap-2">
-                    <span className="text-lg font-bold text-blue-600">{(community as any).event_count || 0}</span>
-                    <div className="flex flex-col gap-1">
-                      <button
-                        className="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-xs"
-                        onClick={() => handleIncrementCommunityCount(community.id)}
-                        title="Increment event count"
-                      >+</button>
-                      <button
-                        className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs"
-                        onClick={() => handleDecrementCommunityCount(community.id)}
-                        title="Decrement event count"
-                        disabled={((community as any).event_count || 0) <= 0}
-                      >-</button>
-                    </div>
-                  </div>
+                  <span className="text-lg font-bold text-blue-600">{(community as any).event_count || 0}</span>
                 </td>
                 <td className="px-4 py-2 flex gap-2">
                   {editingCommunityId === community.id ? (
@@ -2222,22 +2165,7 @@ const AdminPanelPage: React.FC = () => {
                           )}
                         </td>
                         <td className="px-4 py-2 text-center">
-                          <div className="flex items-center justify-center gap-2">
-                            <span className="text-lg font-bold text-blue-600">{venue.event_count || 0}</span>
-                            <div className="flex flex-col gap-1">
-                              <button
-                                className="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-xs"
-                                onClick={() => handleIncrementVenueCount(venue.id)}
-                                title="Increment event count"
-                              >+</button>
-                              <button
-                                className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs"
-                                onClick={() => handleDecrementVenueCount(venue.id)}
-                                title="Decrement event count"
-                                disabled={(venue.event_count || 0) <= 0}
-                              >-</button>
-                            </div>
-                          </div>
+                          <span className="text-lg font-bold text-blue-600">{venue.event_count || 0}</span>
                         </td>
                         <td className="px-4 py-2 flex gap-2">
                           {editingVenueId === venue.id ? (

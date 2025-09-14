@@ -157,8 +157,11 @@ export async function createEvent(event: EventFormData) {
       venue: event.venue,
       is_online: event.isOnline,
       event_type: event.eventType,
-      community_id: event.communityId,
-      registration_url: event.registrationUrl,
+      rsvp_url: event.registrationUrl,
+      organizer_name: event.organizerName,
+      organizer_email: event.organizerEmail,
+      organizer_phone: event.organizerPhone,
+      community_id: event.communityId || null, // Ensure community_id is properly mapped
       city_id: event.cityId,
       created_at: new Date().toISOString()
     }])
@@ -248,9 +251,9 @@ export async function getArchivedEvents(filters?: {
   return data.map(event => ({
     ...event,
     community_name: event.communities?.name || event.community_name || 'Unknown Community',
-    communityLogo: event.communities?.logo,
-    imageUrl: event.banner_url || event.imageUrl || null,
-    registrationClicks: event.registration_clicks || event.registrationClicks || 0
+    community_logo: event.communities?.logo || event.community_logo || null,
+    image_url: event.image_url || null,
+    registration_clicks: event.registration_clicks || 0
   })) as ArchivedEvent[];
 }
 
@@ -328,7 +331,9 @@ export async function archiveExpiredEvents() {
       community_name: event.communities?.name || 'Unknown Community',
       city_id: event.city_id,
       featured: event.featured || false,
-      banner_url: event.banner_url || null,
+      image_url: event.banner_url || null,
+      community_logo: event.communities?.logo || null,
+      registration_clicks: event.registration_clicks || 0,
       created_at: event.created_at,
       archived_at: new Date().toISOString()
     }));
@@ -343,44 +348,7 @@ export async function archiveExpiredEvents() {
       throw archiveError;
     }
 
-    // Increment event counts for all approved events being archived
-    try {
-      const { incrementCommunityEventCount, incrementVenueEventCount } = await import('../utils/supabase');
-      
-      // Count events by community and venue
-      const communityEventCounts = new Map<string, number>();
-      const venueEventCounts = new Map<string, number>();
 
-      expiredEvents.forEach(event => {
-        if (event.community_id) {
-          const currentCount = communityEventCounts.get(event.community_id) || 0;
-          communityEventCounts.set(event.community_id, currentCount + 1);
-        }
-        if (event.venue_id) {
-          const currentCount = venueEventCounts.get(event.venue_id) || 0;
-          venueEventCounts.set(event.venue_id, currentCount + 1);
-        }
-      });
-
-      // Increment community event counts
-      for (const [communityId, count] of communityEventCounts) {
-        for (let i = 0; i < count; i++) {
-          await incrementCommunityEventCount(communityId);
-        }
-        console.log(`✅ Incremented event count by ${count} for community ${communityId}`);
-      }
-
-      // Increment venue event counts
-      for (const [venueId, count] of venueEventCounts) {
-        for (let i = 0; i < count; i++) {
-          await incrementVenueEventCount(venueId);
-        }
-        console.log(`✅ Incremented event count by ${count} for venue ${venueId}`);
-      }
-    } catch (countError) {
-      console.error('Error updating event counts during bulk archiving:', countError);
-      // Don't fail the archiving if count update fails
-    }
 
     // Delete from main events table
     const eventIds = expiredEvents.map(event => event.id);
@@ -481,7 +449,9 @@ export async function archiveSingleEvent(eventId: string) {
       community_name: event.communities?.name || 'Unknown Community',
       city_id: event.city_id,
       featured: event.featured || false,
-      banner_url: event.banner_url || null,
+      image_url: event.banner_url || null,
+      community_logo: event.communities?.logo || null,
+      registration_clicks: event.registration_clicks || 0,
       created_at: event.created_at,
       archived_at: new Date().toISOString()
     };
@@ -496,28 +466,7 @@ export async function archiveSingleEvent(eventId: string) {
       throw archiveError;
     }
 
-    // Increment event counts if the event was approved
-    if (event.status === 'approved') {
-      try {
-        // Import the increment functions
-        const { incrementCommunityEventCount, incrementVenueEventCount } = await import('../utils/supabase');
-        
-        // Increment community event count
-        if (event.community_id) {
-          await incrementCommunityEventCount(event.community_id);
-          console.log(`✅ Incremented event count for community ${event.community_id}`);
-        }
-        
-        // Increment venue event count
-        if (event.venue_id) {
-          await incrementVenueEventCount(event.venue_id);
-          console.log(`✅ Incremented event count for venue ${event.venue_id}`);
-        }
-      } catch (countError) {
-        console.error('Error updating event counts during archiving:', countError);
-        // Don't fail the archiving if count update fails
-      }
-    }
+
 
     // Delete from main events table
     const { error: deleteError } = await supabase

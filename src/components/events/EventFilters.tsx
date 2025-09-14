@@ -53,26 +53,35 @@ const EventFilters: React.FC<EventFiltersProps> = ({
   const [communitySearch, setCommunitySearch] = useState('');
   const [showCommunityDropdown, setShowCommunityDropdown] = useState(false);
   const [filteredCommunities, setFilteredCommunities] = useState<string[]>([]);
+  const [debouncedCommunitySearch, setDebouncedCommunitySearch] = useState('');
   const communitySearchRef = useRef<HTMLInputElement>(null);
   const communityDropdownRef = useRef<HTMLDivElement>(null);
 
   const eventTypes: EventType[] = ['Hackathon', 'Workshop', 'Meetup', 'Talk', 'Conference', 'Other'];
   const eventFormats = ['In-person', 'Online'];
 
-  
+  // Debounce community search for better performance
   useEffect(() => {
-    
+    const timer = setTimeout(() => {
+      setDebouncedCommunitySearch(communitySearch);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [communitySearch]);
+
+  // Filter communities based on debounced search
+  useEffect(() => {
     const approvedCommunities = [...availableCommunities].sort();
 
-    if (communitySearch.trim() === '') {
+    if (debouncedCommunitySearch.trim() === '') {
       setFilteredCommunities(approvedCommunities.slice(0, 10)); 
     } else {
       const filtered = approvedCommunities.filter(name =>
-        name.toLowerCase().includes(communitySearch.toLowerCase())
+        name.toLowerCase().includes(debouncedCommunitySearch.toLowerCase())
       ).slice(0, 10); 
       setFilteredCommunities(filtered);
     }
-  }, [communitySearch, availableCommunities]);
+  }, [debouncedCommunitySearch, availableCommunities]);
 
   
   const handleCommunitySearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {

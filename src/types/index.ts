@@ -52,8 +52,12 @@ export type Event = {
   registrationClicks: number;
 };
 
-export type EventFormData = Omit<Event, 'id' | 'createdAt' | 'communityName'> & {
+export type EventFormData = Omit<Event, 'id' | 'createdAt' | 'communityName' | 'communityLogo'> & {
   id?: string;
+  communityId?: string; // Make communityId optional since events can exist without communities
+  organizerName?: string;
+  organizerEmail?: string;
+  organizerPhone?: string;
   sponsors?: Array<{
     name: string;
     banner: File | null;
@@ -71,13 +75,13 @@ export type ArchivedEvent = {
   event_type: string;
   community_id: string;
   community_name: string;
-  communityLogo?: string;
+  community_logo?: string;
   city_id: string;
   featured: boolean;
   created_at: string;
   archived_at: string;
-  imageUrl?: string;
-  registrationClicks: number;
+  image_url?: string;
+  registration_clicks: number;
 };
 
 export type FilterOptions = {

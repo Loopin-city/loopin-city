@@ -161,6 +161,7 @@ const EventSubmissionForm: React.FC = () => {
     organizerEmail: '',
     organizerPhone: '',
     eventUrl: '',
+    communityId: '', // Add communityId to form data
     communityName: '',
     communityLogo: null as File | null,
     proofOfExistence: null as File | null,
@@ -293,6 +294,7 @@ const EventSubmissionForm: React.FC = () => {
       // Clear community-related form data
       setFormData(prev => ({
         ...prev,
+        communityId: '', // Clear community ID when city changes
         communityName: '',
         communityWebsite: '',
         communitySocialLinks: [],
@@ -466,6 +468,7 @@ const EventSubmissionForm: React.FC = () => {
       // Auto-fill form data with community information
       setFormData(prev => ({
         ...prev,
+        communityId: community.id, // Set the community ID for existing community
         communityName: community.name,
         communityWebsite: community.website || '',
         communitySocialLinks: community.social_links || [],
@@ -500,6 +503,7 @@ const EventSubmissionForm: React.FC = () => {
       // Clear community-related fields for new community
       setFormData(prev => ({
         ...prev,
+        communityId: '', // Clear community ID for new community mode
         communityName: '',
         communityWebsite: '',
         communitySocialLinks: [],
@@ -770,8 +774,12 @@ const EventSubmissionForm: React.FC = () => {
       
       let communityId = null;
       
-      // Only create/find community if one is selected or in new community mode
-      if (selectedCommunity || isNewCommunityMode) {
+      // Handle community logic
+      if (selectedCommunity) {
+        // Use existing community ID
+        communityId = selectedCommunity.id;
+        console.log(`🔗 Using existing community: "${selectedCommunity.name}" (ID: ${communityId})`);
+      } else if (isNewCommunityMode) {
         console.log('🔍 Starting comprehensive duplicate detection for:', {
           communityName: formData.communityName,
           cityId: selectedCity.id,
@@ -830,7 +838,7 @@ const EventSubmissionForm: React.FC = () => {
         }
 
         
-        if (!communityId) {
+        if (!communityId && isNewCommunityMode) {
           
           const { data: approvedCommunity, error: approvedCommunityError } = await supabase
             .from('communities')
@@ -895,9 +903,12 @@ const EventSubmissionForm: React.FC = () => {
             }
           }
         }
+      } else {
+        console.log('📝 No community selected - event will be created without community association');
+      }
         
-        // Log admin duplicate analysis only if community was created/found
-        if (similarCommunities && similarCommunities.length > 0) {
+      // Log admin duplicate analysis only if community was created/found and we're in new community mode
+      if (isNewCommunityMode && similarCommunities && similarCommunities.length > 0) {
           const bestMatch = similarCommunities[0];
           if (bestMatch.similarity_score >= 70 && bestMatch.similarity_score < 90) {
             try {
@@ -923,13 +934,9 @@ const EventSubmissionForm: React.FC = () => {
               console.log('Full breakdown stored in score_breakdown column');
             } catch (adminLogError) {
               console.warn('Failed to log comprehensive duplicate for admin review:', adminLogError);
-              
             }
           }
         }
-      } else {
-        console.log('📝 No community selected - event will be created without community association');
-      }
 
       
       let venueId = null;
