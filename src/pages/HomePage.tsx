@@ -22,13 +22,22 @@ const HomePage: React.FC = () => {
   const [community, setCommunity] = useState('');
   const [eventType, setEventType] = useState<EventType | ''>('');
   const [eventFormat, setEventFormat] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   
   useEffect(() => {
+    let isMounted = true; // Prevent state updates if component unmounts
+
     const fetchEvents = async () => {
+      if (!isMounted) return;
+      
       setLoading(true);
+      setError(null);
       try {
         if (!selectedCity) {
-          setEvents([]);
+          if (isMounted) {
+            setEvents([]);
+          }
           return;
         }
         
@@ -37,9 +46,10 @@ const HomePage: React.FC = () => {
           date: new Date().toISOString().split('T')[0] 
         });
         
-        const approvedEvents = eventsData.filter((event: any) => event.status === 'approved');
+        if (!isMounted) return; // Check again after async operation
         
-        const transformedEvents: Event[] = approvedEvents.map((event: any) => ({
+        // getEvents already filters for approved events, so no need to filter again
+        const transformedEvents: Event[] = eventsData.map((event: any) => ({
           id: event.id,
           title: event.title,
           description: event.description,
@@ -62,30 +72,49 @@ const HomePage: React.FC = () => {
           registrationClicks: event.registration_clicks || 0
         }));
         
-        setEvents(transformedEvents);
+        if (isMounted) {
+          setEvents(transformedEvents);
+          setLastRefresh(new Date());
+        }
       } catch (error) {
         console.error('Error fetching events:', error);
-        setEvents([]); 
+        if (isMounted) {
+          setError('Failed to load events. Please try again.');
+          setEvents([]); 
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     const fetchArchivedEvents = async () => {
+      if (!isMounted) return;
+      
       setLoadingArchived(true);
       try {
         if (!selectedCity) {
-          setArchivedEvents([]);
+          if (isMounted) {
+            setArchivedEvents([]);
+          }
           return;
         }
         
         const archivedData = await getArchivedEvents({ cityId: selectedCity.id });
-        setArchivedEvents(archivedData);
+        
+        if (isMounted) {
+          setArchivedEvents(archivedData);
+        }
       } catch (error) {
         console.error('Error fetching archived events:', error);
-        setArchivedEvents([]);
+        if (isMounted) {
+          setArchivedEvents([]);
+        }
       } finally {
-        setLoadingArchived(false);
+        if (isMounted) {
+          setLoadingArchived(false);
+        }
       }
     };
 
@@ -93,6 +122,10 @@ const HomePage: React.FC = () => {
       fetchEvents();
       fetchArchivedEvents();
     }
+
+    return () => {
+      isMounted = false;
+    };
   }, [selectedCity]);
 
   // Handle scroll to hero when redirected from city selection
@@ -111,35 +144,43 @@ const HomePage: React.FC = () => {
   }, [location.state]);
 
   // Filter logic for upcoming events
-  const filteredUpcomingEvents = events.filter(event => {
-    const eventDate = new Date(event.date);
-    const startDateFilter = startDate ? new Date(startDate) : null;
-    const endDateFilter = endDate ? new Date(endDate) : null;
-    const communityFilter = community ? event.communityId === community : true;
-    const eventTypeFilter = eventType ? event.eventType === eventType : true;
-    const formatFilter = eventFormat ? 
-      (eventFormat === 'online' ? event.isOnline : !event.isOnline) : true;
+  const filteredUpcomingEvents = React.useMemo(() => {
+    return events.filter(event => {
+      const eventDate = new Date(event.date);
+      const startDateFilter = startDate ? new Date(startDate) : null;
+      const endDateFilter = endDate ? new Date(endDate) : null;
+      
+      // Fix community filter - community is the community name, not ID
+      const communityFilter = community ? event.communityName === community : true;
+      const eventTypeFilter = eventType ? event.eventType === eventType : true;
+      const formatFilter = eventFormat ? 
+        (eventFormat === 'online' ? event.isOnline : !event.isOnline) : true;
 
-    return (!startDateFilter || eventDate >= startDateFilter) &&
-           (!endDateFilter || eventDate <= endDateFilter) &&
-           communityFilter && eventTypeFilter && formatFilter;
-  });
+      return (!startDateFilter || eventDate >= startDateFilter) &&
+             (!endDateFilter || eventDate <= endDateFilter) &&
+             communityFilter && eventTypeFilter && formatFilter;
+    });
+  }, [events, startDate, endDate, community, eventType, eventFormat]);
 
   // Filter logic for past events - only show featured events
-  const filteredPastEvents = archivedEvents.filter(event => {
-    const eventDate = new Date(event.date);
-    const startDateFilter = startDate ? new Date(startDate) : null;
-    const endDateFilter = endDate ? new Date(endDate) : null;
-    const communityFilter = community ? event.community_id === community : true;
-    const eventTypeFilter = eventType ? event.event_type === eventType : true;
-    const formatFilter = eventFormat ? 
-      (eventFormat === 'online' ? event.is_online : !event.is_online) : true;
-    const featuredFilter = event.featured; // Only show featured events
+  const filteredPastEvents = React.useMemo(() => {
+    return archivedEvents.filter(event => {
+      const eventDate = new Date(event.date);
+      const startDateFilter = startDate ? new Date(startDate) : null;
+      const endDateFilter = endDate ? new Date(endDate) : null;
+      
+      // Fix community filter - community is the community name, not ID
+      const communityFilter = community ? event.community_name === community : true;
+      const eventTypeFilter = eventType ? event.event_type === eventType : true;
+      const formatFilter = eventFormat ? 
+        (eventFormat === 'online' ? event.is_online : !event.is_online) : true;
+      const featuredFilter = event.featured; // Only show featured events
 
-    return (!startDateFilter || eventDate >= startDateFilter) &&
-           (!endDateFilter || eventDate <= endDateFilter) &&
-           communityFilter && eventTypeFilter && formatFilter && featuredFilter;
-  });
+      return (!startDateFilter || eventDate >= startDateFilter) &&
+             (!endDateFilter || eventDate <= endDateFilter) &&
+             communityFilter && eventTypeFilter && formatFilter && featuredFilter;
+    });
+  }, [archivedEvents, startDate, endDate, community, eventType, eventFormat]);
 
   const resetFilters = () => {
     setStartDate('');
@@ -149,15 +190,35 @@ const HomePage: React.FC = () => {
     setEventFormat('');
   };
 
-  const availableCommunities = Array.from(
-    new Set([
-      ...events.map(e => ({ id: e.communityId, name: e.communityName })),
-      ...archivedEvents.map(e => ({ id: e.community_id, name: e.community_name }))
-    ].map(item => JSON.stringify(item)))
-  ).map(item => JSON.parse(item));
+  const availableCommunities = React.useMemo(() => {
+    const communityNames = new Set<string>();
+    
+    // Add community names from upcoming events
+    events.forEach(event => {
+      if (event.communityName && event.communityName !== 'Unknown Community') {
+        communityNames.add(event.communityName);
+      }
+    });
+    
+    // Add community names from archived events
+    archivedEvents.forEach(event => {
+      if (event.community_name && event.community_name !== 'Unknown Community') {
+        communityNames.add(event.community_name);
+      }
+    });
+    
+    return Array.from(communityNames).sort();
+  }, [events, archivedEvents]);
 
   const handleTabChange = (tab: 'upcoming' | 'past') => {
     setActiveTab(tab);
+  };
+
+  const handleRefresh = () => {
+    if (selectedCity) {
+      fetchEvents();
+      fetchArchivedEvents();
+    }
   };
   
   if (!selectedCity) {
@@ -269,7 +330,7 @@ const HomePage: React.FC = () => {
           
           <div className="mb-6 sm:mb-8">
             <div className="flex items-center justify-between mb-4">
-              <div>
+              <div className="flex-1">
                 <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
                   {loading ? 'Loading events...' : 
                     activeTab === 'upcoming' ? (filteredUpcomingEvents.length === 0 ? (events.length === 0 ? 'No upcoming events found' : 'No upcoming events match your filters') : 
@@ -292,6 +353,29 @@ const HomePage: React.FC = () => {
                     Try adjusting your filters to see more events
                   </p>
                 )}
+                {error && (
+                  <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-red-600 text-sm">{error}</p>
+                    <button 
+                      onClick={handleRefresh}
+                      className="mt-2 text-red-600 hover:text-red-800 text-sm font-medium underline"
+                    >
+                      Try again
+                    </button>
+                  </div>
+                )}
+              </div>
+              <div className="ml-4">
+                <button
+                  onClick={handleRefresh}
+                  disabled={loading}
+                  className="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 disabled:bg-gray-300 text-black font-semibold rounded-lg transition-colors flex items-center gap-2"
+                >
+                  <svg className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Refresh
+                </button>
               </div>
             </div>
           </div>

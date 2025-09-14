@@ -9,7 +9,7 @@ interface EventCardProps {
   event: Event;
 }
 
-const EventCard: React.FC<EventCardProps> = ({ event }) => {
+const EventCard: React.FC<EventCardProps> = React.memo(({ event }) => {
   const [isTouchDevice, setIsTouchDevice] = useState(false);
   
   useEffect(() => {
@@ -211,6 +211,6 @@ const EventCard: React.FC<EventCardProps> = ({ event }) => {
       </div>
     </div>
   );
-};
+});
 
 export default EventCard;

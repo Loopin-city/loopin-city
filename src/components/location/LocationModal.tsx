@@ -16,6 +16,7 @@ const LocationModal: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
 
   // Fuzzy search function for better city matching
   const fuzzySearch = (query: string, text: string): boolean => {
@@ -89,11 +90,22 @@ const LocationModal: React.FC = () => {
   
   // Debounce search query for better performance
   useEffect(() => {
+    if (searchQuery.trim() === '') {
+      setDebouncedSearchQuery('');
+      setIsSearching(false);
+      return;
+    }
+
+    setIsSearching(true);
     const timer = setTimeout(() => {
       setDebouncedSearchQuery(searchQuery);
+      setIsSearching(false);
     }, 300);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      setIsSearching(false);
+    };
   }, [searchQuery]);
 
   const citiesByState: { [key: string]: City[] } = React.useMemo(() => {
@@ -105,17 +117,18 @@ const LocationModal: React.FC = () => {
     return grouped;
   }, [cities]);
 
-  
-  const allCities = cities;
-  const filteredCities = debouncedSearchQuery
-    ? allCities.filter(city =>
+  // Memoize filtered cities for better performance
+  const filteredCities = React.useMemo(() => {
+    if (debouncedSearchQuery) {
+      return cities.filter(city =>
         fuzzySearch(debouncedSearchQuery, city.name) ||
         fuzzySearch(debouncedSearchQuery, city.state)
-      )
-    : selectedState
-    ? citiesByState[selectedState] || []
-    : [];
-  const cityList = debouncedSearchQuery ? filteredCities : (selectedState ? citiesByState[selectedState] || [] : []);
+      );
+    }
+    return selectedState ? citiesByState[selectedState] || [] : [];
+  }, [cities, debouncedSearchQuery, selectedState, citiesByState]);
+
+  const cityList = filteredCities;
 
   const handleCitySelect = (city: City) => {
     setSelectedCity(city);
@@ -333,7 +346,7 @@ const LocationModal: React.FC = () => {
                 {cityList.length > 0 && (
                   <div className="w-full text-center text-sm text-gray-600 mb-4 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
                     <div className="flex items-center justify-center gap-2">
-                      {debouncedSearchQuery && searchQuery !== debouncedSearchQuery && (
+                      {isSearching && (
                         <div className="w-3 h-3 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin"></div>
                       )}
                       <span>

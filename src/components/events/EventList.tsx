@@ -10,7 +10,7 @@ interface EventListProps {
   loading?: boolean;
 }
 
-const EventList: React.FC<EventListProps> = ({ events, loading = false }) => {
+const EventList: React.FC<EventListProps> = React.memo(({ events, loading = false }) => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [isMobile, setIsMobile] = useState(false);
 
@@ -338,6 +338,6 @@ const EventList: React.FC<EventListProps> = ({ events, loading = false }) => {
       )}
     </div>
   );
-};
+});
 
 export default EventList;
