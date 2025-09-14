@@ -75,13 +75,13 @@ export type ArchivedEvent = {
   event_type: string;
   community_id: string;
   community_name: string;
-  communityLogo?: string;
+  community_logo?: string;
   city_id: string;
   featured: boolean;
   created_at: string;
   archived_at: string;
-  imageUrl?: string;
-  registrationClicks: number;
+  image_url?: string;
+  registration_clicks: number;
 };
 
 export type FilterOptions = {
