@@ -157,8 +157,11 @@ export async function createEvent(event: EventFormData) {
       venue: event.venue,
       is_online: event.isOnline,
       event_type: event.eventType,
-      community_id: event.communityId,
-      registration_url: event.registrationUrl,
+      rsvp_url: event.registrationUrl,
+      organizer_name: event.organizerName,
+      organizer_email: event.organizerEmail,
+      organizer_phone: event.organizerPhone,
+      community_id: event.communityId || null, // Ensure community_id is properly mapped
       city_id: event.cityId,
       created_at: new Date().toISOString()
     }])

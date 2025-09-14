@@ -52,8 +52,12 @@ export type Event = {
   registrationClicks: number;
 };
 
-export type EventFormData = Omit<Event, 'id' | 'createdAt' | 'communityName'> & {
+export type EventFormData = Omit<Event, 'id' | 'createdAt' | 'communityName' | 'communityLogo'> & {
   id?: string;
+  communityId?: string; // Make communityId optional since events can exist without communities
+  organizerName?: string;
+  organizerEmail?: string;
+  organizerPhone?: string;
   sponsors?: Array<{
     name: string;
     banner: File | null;
