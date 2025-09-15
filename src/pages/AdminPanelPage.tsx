@@ -1291,9 +1291,9 @@ const AdminPanelPage: React.FC = () => {
                   </td>
                   <td className="px-4 py-2 text-sm">
                     <div>
-                      <div>Start: {new Date(event.date).toLocaleDateString()}</div>
+                      <div>Start: {event.date}</div>
                       {event.endDate && event.endDate !== event.date && (
-                        <div className="text-gray-600">End: {new Date(event.endDate).toLocaleDateString()}</div>
+                        <div className="text-gray-600">End: {event.endDate}</div>
                       )}
                       <div className="mt-1">
                         {(() => {
@@ -1452,9 +1452,9 @@ const AdminPanelPage: React.FC = () => {
                   </td>
                   <td className="px-4 py-2 text-sm">
                     <div>
-                      <div>Start: {new Date(event.date).toLocaleDateString()}</div>
+                      <div>Start: {event.date}</div>
                       {event.end_date && (
-                        <div className="text-gray-600">End: {new Date(event.end_date).toLocaleDateString()}</div>
+                        <div className="text-gray-600">End: {event.end_date}</div>
                       )}
                     </div>
                   </td>
