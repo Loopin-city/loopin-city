@@ -77,7 +77,8 @@ export async function getAllEvents() {
         state
       )
     `)
-    .order('date', { ascending: false });
+    .order('date', { ascending: false })
+    .abortSignal(AbortSignal.timeout(10000));
 
   const { data, error } = await query;
 
@@ -129,7 +130,8 @@ export async function getEventById(id: string) {
       )
     `)
     .eq('id', id)
-    .single();
+    .single()
+    .abortSignal(AbortSignal.timeout(10000));
 
   if (error) {
     console.error('Error fetching event:', error);

@@ -74,6 +74,7 @@ const EventDetailPage: React.FC = () => {
     const fetchEvent = async () => {
       setLoading(true);
       setError(null);
+      setEvent(null); // Clear previous event data
       
       if (!id) {
         setError('No event ID provided');
@@ -157,31 +158,33 @@ const EventDetailPage: React.FC = () => {
   };
 
   const formatEventDateTime = (dateString: string, endDateString?: string) => {
-    const startDate = new Date(dateString);
+    // Parse as UTC to avoid timezone conversion issues
+    const startDate = new Date(dateString + (dateString.includes('T') ? '' : 'T00:00:00Z'));
     const startTime = startDate.toLocaleTimeString('en-US', { 
       hour: 'numeric', 
       minute: '2-digit',
-      hour12: true 
+      hour12: true,
+      timeZone: 'UTC'
     });
 
     if (endDateString) {
-      const endDate = new Date(endDateString);
+      const endDate = new Date(endDateString + (endDateString.includes('T') ? '' : 'T00:00:00Z'));
       const endTime = endDate.toLocaleTimeString('en-US', { 
         hour: 'numeric', 
         minute: '2-digit',
-        hour12: true 
+        hour12: true,
+        timeZone: 'UTC'
       });
-      
       
       const isSameDay = startDate.toDateString() === endDate.toDateString();
       
       if (isSameDay) {
-        
         const formattedDate = startDate.toLocaleDateString('en-US', { 
           weekday: 'short',
           month: 'short', 
           day: 'numeric',
-          year: 'numeric'
+          year: 'numeric',
+          timeZone: 'UTC'
         });
         return {
           date: formattedDate,
@@ -189,15 +192,16 @@ const EventDetailPage: React.FC = () => {
           isMultiDay: false
         };
       } else {
-        
         const startFormatted = startDate.toLocaleDateString('en-US', { 
           month: 'short', 
-          day: 'numeric'
+          day: 'numeric',
+          timeZone: 'UTC'
         });
         const endFormatted = endDate.toLocaleDateString('en-US', { 
           month: 'short', 
           day: 'numeric',
-          year: 'numeric'
+          year: 'numeric',
+          timeZone: 'UTC'
         });
         return {
           date: `${startFormatted} - ${endFormatted}`,
@@ -207,12 +211,12 @@ const EventDetailPage: React.FC = () => {
       }
     }
 
-    
     const formattedDate = startDate.toLocaleDateString('en-US', { 
       weekday: 'short',
       month: 'short', 
       day: 'numeric',
-      year: 'numeric'
+      year: 'numeric',
+      timeZone: 'UTC'
     });
 
     return {
@@ -454,10 +458,10 @@ const EventDetailPage: React.FC = () => {
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="text-xs text-blue-700 uppercase tracking-wide font-medium mb-1">
-                            {eventDateTime.isMultiDay ? 'Event Dates' : 'Event Date'}
+                            Event Date
                           </div>
                           <div className="font-bold text-blue-900 text-sm leading-tight">
-                            {eventDateTime.date}
+                            {event.date}
                           </div>
                         </div>
                       </div>
@@ -468,9 +472,9 @@ const EventDetailPage: React.FC = () => {
                           <Clock className="h-5 w-5 text-white" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="text-xs text-green-700 uppercase tracking-wide font-medium mb-1">Time</div>
+                          <div className="text-xs text-green-700 uppercase tracking-wide font-medium mb-1">End Date</div>
                           <div className="font-bold text-green-900 text-sm">
-                            {eventDateTime.time}
+                            {event.endDate || 'Same day'}
                           </div>
                         </div>
                       </div>
