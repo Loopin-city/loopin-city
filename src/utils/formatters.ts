@@ -2,17 +2,16 @@ import { format, isToday, isTomorrow } from 'date-fns';
 
 
 export function formatDateTime(dateString: string): string {
-  const date = new Date(dateString);
+  // Extract date and time parts directly from string to avoid timezone issues
+  const dateTimeParts = dateString.replace('T', ' T ');
+  const [datePart, timePart] = dateTimeParts.split(' T ');
   
-  if (isToday(date)) {
-    return `Today at ${format(date, 'h:mm a')}`;
+  if (!timePart) {
+    return datePart;
   }
   
-  if (isTomorrow(date)) {
-    return `Tomorrow at ${format(date, 'h:mm a')}`;
-  }
-  
-  return format(date, 'MMM d, yyyy \'at\' h:mm a');
+  // Format as "YYYY-MM-DD T HH:MM:SS"
+  return `${datePart} T ${timePart.substring(0, 8)}`;
 }
 
 
@@ -33,18 +32,18 @@ export function formatDate(dateString: string): string {
 
 export function formatDateRange(startDate: string, endDate?: string): string {
   if (!endDate) {
-    return formatDate(startDate);
+    return formatDateTime(startDate);
   }
   
-  const start = new Date(startDate);
-  const end = new Date(endDate);
+  const startFormatted = formatDateTime(startDate);
+  const endFormatted = formatDateTime(endDate);
   
-  
-  if (format(start, 'yyyy-MM-dd') === format(end, 'yyyy-MM-dd')) {
-    return formatDate(startDate);
+  // Check if same date (first 10 characters)
+  if (startDate.substring(0, 10) === endDate.substring(0, 10)) {
+    return startFormatted;
   }
   
-  return `${format(start, 'MMM d')} - ${format(end, 'MMM d, yyyy')}`;
+  return `${startFormatted} to ${endFormatted}`;
 }
 
 

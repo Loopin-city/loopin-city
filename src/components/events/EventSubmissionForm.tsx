@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useCallback, memo } from 'react';
+import React, { useState, useEffect, useCallback, memo, useRef } from 'react';
 import type { EventType, Community } from '../../types';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { supabase } from '../../utils/supabase';
 import { findOrCreateVenue } from '../../api/venues';
 import { useLocation } from '../../contexts/LocationContext';
+import { updateCommunityEventCount, updateVenueEventCount } from '../../api/eventCounts';
 import { getCities } from '../../api/cities';
 import { sendEventAlertToSubscribers } from '../../api/alerts';
 import type { City } from '../../types';
@@ -181,6 +182,14 @@ const EventSubmissionForm: React.FC = () => {
   const [selectedCommunity, setSelectedCommunity] = useState<Community | null>(null);
   const [isNewCommunityMode, setIsNewCommunityMode] = useState(false);
   
+  // Debug effect to track selectedCommunity changes
+  useEffect(() => {
+    console.log('selectedCommunity state changed to:', selectedCommunity?.name || 'null');
+    if (selectedCommunity === null) {
+      console.trace('selectedCommunity was set to null, stack trace:');
+    }
+  }, [selectedCommunity]);
+  
   // Enhanced form validation state
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [fieldTouched, setFieldTouched] = useState<Record<string, boolean>>({});
@@ -210,61 +219,10 @@ const EventSubmissionForm: React.FC = () => {
     communityYearFounded: { required: false, min: 1900, max: new Date().getFullYear() }
   };
   
-  // Calculate form completion percentage - optimized to prevent focus loss
-  useEffect(() => {
-    // Count basic validation rule fields - consider filled fields as complete even if not touched
-    const basicCompletedFields = Object.keys(validationRules).filter(field => {
-      const value = formData[field as keyof typeof formData];
-      const hasError = fieldErrors[field];
-      const isEmpty = !value || value.toString().trim() === '';
-      
-      // Field is complete if it has a value and no errors
-      return !isEmpty && !hasError;
-    }).length;
-    
-    // Count additional required fields
-    let additionalCompletedFields = 0;
-    let totalAdditionalFields = 2; // banner, venue (always required)
-    
-    // Check banner
-    if (formData.banner) additionalCompletedFields++;
-    
-    // Check venue (required for offline events)
-    if (formData.isOnline || (formData.venue && formData.venue.trim() !== '')) {
-      additionalCompletedFields++;
-    }
-    
-    // Community fields are only required if a community is selected or in new community mode
-    if (selectedCommunity || isNewCommunityMode) {
-      totalAdditionalFields += 3; // communityLogo, proofOfExistence, socialLinks
-      
-      // Check community logo
-      if (formData.communityLogo) additionalCompletedFields++;
-      
-      // Check proof of existence
-      if (formData.proofOfExistence) additionalCompletedFields++;
-      
-      // Check social links (at least one non-empty link)
-      if (formData.communitySocialLinks && formData.communitySocialLinks.length > 0 && formData.communitySocialLinks[0].trim() !== '') {
-        additionalCompletedFields++;
-      }
-    }
-    
-    const totalCompletedFields = basicCompletedFields + additionalCompletedFields;
-    const totalFields = Object.keys(validationRules).length + totalAdditionalFields;
-    
-    // Announce progress to screen readers
-    if (totalCompletedFields > 0 && totalCompletedFields <= totalFields) {
-      const progressPercentage = Math.round((totalCompletedFields / totalFields) * 100);
-      const progressMessage = `Form progress: ${progressPercentage}% complete, ${totalCompletedFields} of ${totalFields} fields filled`;
-      
-      // Create a live region for screen readers
-      const liveRegion = document.getElementById('form-progress-live');
-      if (liveRegion) {
-        liveRegion.textContent = progressMessage;
-      }
-    }
-  }, [fieldTouched, fieldErrors, formData, validationRules]); // Added validationRules dependency
+  // Calculate form completion percentage - DISABLED FOR DEBUGGING
+  // useEffect(() => {
+  //   // Progress calculation code disabled
+  // }, [fieldTouched, fieldErrors, formData, validationRules]);
   
   // Fetch cities when component mounts
   useEffect(() => {
@@ -284,17 +242,16 @@ const EventSubmissionForm: React.FC = () => {
     if (globalSelectedCity) setSelectedCity(globalSelectedCity);
   }, [globalSelectedCity]);
 
-  // Reset community selection when city changes
+  // Reset community selection when city changes - simplified
+  const cityIdRef = useRef<string | null>(null);
   useEffect(() => {
-    if (selectedCity) {
-      // Reset community selection when city changes
+    if (selectedCity && cityIdRef.current && selectedCity.id !== cityIdRef.current) {
+      console.log('City changed, resetting community selection');
       setSelectedCommunity(null);
       setIsNewCommunityMode(false);
-      
-      // Clear community-related form data
       setFormData(prev => ({
         ...prev,
-        communityId: '', // Clear community ID when city changes
+        communityId: '',
         communityName: '',
         communityWebsite: '',
         communitySocialLinks: [],
@@ -302,27 +259,11 @@ const EventSubmissionForm: React.FC = () => {
         communityYearFounded: '',
         communityPreviousEvents: [],
       }));
-      
-      // Clear community-related errors
-      setFieldErrors(prev => {
-        const clearedErrors = { ...prev };
-        ['communityName', 'communityWebsite', 'communitySocialLinks', 'communitySize', 'communityYearFounded', 'communitySelection'].forEach(field => {
-          delete clearedErrors[field];
-        });
-        return clearedErrors;
-      });
-      
-      // Reset community-related touched states
-      setFieldTouched(prev => ({
-        ...prev,
-        communityName: false,
-        communityWebsite: false,
-        communitySocialLinks: false,
-        communitySize: false,
-        communityYearFounded: false,
-      }));
     }
-  }, [selectedCity?.id]); // Only trigger when city ID changes
+    if (selectedCity) {
+      cityIdRef.current = selectedCity.id;
+    }
+  }, [selectedCity?.id]);
   
   const eventTypes: EventType[] = ['Hackathon', 'Workshop', 'Meetup', 'Talk', 'Conference', 'Other'];
   
@@ -434,20 +375,10 @@ const EventSubmissionForm: React.FC = () => {
   
 
   
-  // Update form progress when fields change - optimized to prevent focus loss
-  useEffect(() => {
-    const completedFields = Object.keys(validationRules).filter(field => 
-      fieldTouched[field] && !fieldErrors[field] && formData[field as keyof typeof formData]
-    ).length;
-    
-    const progress = (completedFields / Object.keys(validationRules).length) * 100;
-    
-    // Update live region for screen readers
-    const liveRegion = document.getElementById('form-progress-live');
-    if (liveRegion) {
-      liveRegion.textContent = `Form progress: ${Math.round(progress)}% complete, ${completedFields} of ${Object.keys(validationRules).length} fields filled`;
-    }
-  }, [fieldTouched, fieldErrors]); // Removed formData dependency to prevent excessive re-renders
+  // Update form progress - DISABLED FOR DEBUGGING
+  // useEffect(() => {
+  //   // Progress update code disabled
+  // }, [fieldTouched, fieldErrors]);
   
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -462,13 +393,16 @@ const EventSubmissionForm: React.FC = () => {
 
   // Handle community selection
   const handleCommunitySelect = (community: Community | null) => {
+    console.log('Community selected:', community);
+    console.log('Setting selectedCommunity to:', community?.name);
     setSelectedCommunity(community);
     
     if (community) {
-      // Auto-fill form data with community information
+      console.log('Auto-filling form data for community:', community.name);
+      // Immediately set the community ID to ensure it's available for event creation
       setFormData(prev => ({
         ...prev,
-        communityId: community.id, // Set the community ID for existing community
+        communityId: community.id,
         communityName: community.name,
         communityWebsite: community.website || '',
         communitySocialLinks: community.social_links || [],
@@ -486,11 +420,16 @@ const EventSubmissionForm: React.FC = () => {
       setFieldTouched(prev => ({ ...prev, ...touchedFields }));
       
       // Clear errors for auto-filled fields AND community selection error
-      const clearedErrors = { ...fieldErrors };
-      ['communityName', 'communityWebsite', 'communitySocialLinks', 'communitySize', 'communityYearFounded', 'communitySelection'].forEach(field => {
-        delete clearedErrors[field];
+      setFieldErrors(prev => {
+        const clearedErrors = { ...prev };
+        ['communityName', 'communityWebsite', 'communitySocialLinks', 'communitySize', 'communityYearFounded', 'communitySelection'].forEach(field => {
+          delete clearedErrors[field];
+        });
+        return clearedErrors;
       });
-      setFieldErrors(clearedErrors);
+    } else {
+      // Clear community ID when no community is selected
+      setFormData(prev => ({ ...prev, communityId: '' }));
     }
   };
 
@@ -530,24 +469,11 @@ const EventSubmissionForm: React.FC = () => {
     }
   };
 
-  // Handle field changes from CommunityFields component
+  // Handle field changes from CommunityFields component - DISABLED FOR DEBUGGING
   const handleFieldChange = (field: string, value: any) => {
-    if (field === 'fieldTouched') {
-      setFieldTouched(value);
-      return;
-    }
-    
-    setFormData(prev => ({ ...prev, [field]: value }));
-    
-    // Mark field as touched and validate
-    setFieldTouched(prev => ({ ...prev, [field]: true }));
-    const error = validateField(field, value);
-    setFieldErrors(prev => ({ ...prev, [field]: error || '' }));
-
-    // Check for duplicate community names when community name changes
-    if (field === 'communityName' && value && isNewCommunityMode && selectedCity) {
-      checkForDuplicateCommunity(value);
-    }
+    console.log('handleFieldChange called with field:', field, 'value:', value);
+    // TEMPORARILY DISABLED TO ISOLATE ISSUE
+    return;
   };
 
   // Check for duplicate community names
@@ -779,6 +705,10 @@ const EventSubmissionForm: React.FC = () => {
         // Use existing community ID
         communityId = selectedCommunity.id;
         console.log(`🔗 Using existing community: "${selectedCommunity.name}" (ID: ${communityId})`);
+      } else if (formData.communityId) {
+        // Use community ID from form data if available
+        communityId = formData.communityId;
+        console.log(`🔗 Using community ID from form data: ${communityId}`);
       } else if (isNewCommunityMode) {
         console.log('🔍 Starting comprehensive duplicate detection for:', {
           communityName: formData.communityName,
@@ -982,6 +912,23 @@ const EventSubmissionForm: React.FC = () => {
 
       if (!event) {
         throw new Error('Failed to submit event: No data returned');
+      }
+
+      // Update community and venue event counts after creating event
+      if (communityId) {
+        try {
+          await updateCommunityEventCount(communityId);
+        } catch (countError) {
+          console.warn('Failed to update community event count:', countError);
+        }
+      }
+      
+      if (venueId) {
+        try {
+          await updateVenueEventCount(venueId);
+        } catch (countError) {
+          console.warn('Failed to update venue event count:', countError);
+        }
       }
 
       // Handle sponsor uploads and database insertion
@@ -1791,8 +1738,9 @@ const EventSubmissionForm: React.FC = () => {
             organizerPhone: formData.organizerPhone,
           }}
           onFieldChange={handleFieldChange}
-            fieldErrors={fieldErrors}
-            fieldTouched={fieldTouched}
+          fieldErrors={fieldErrors}
+          fieldTouched={fieldTouched}
+          isReadOnly={false}
           />
 
         {/* Community Logo Upload */}

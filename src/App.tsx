@@ -38,7 +38,7 @@ function App() {
           <Route path="/alerts" element={<SubscribeAlertsPage />} />
           <Route path="/unsubscribe" element={<UnsubscribePage />} />
           <Route path="/admin-debug" element={<AdminDebugPage />} />
-          <Route path="/admin2025" element={<AdminPanelPage />} />
+          <Route path="/admloopin48621195392025" element={<AdminPanelPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
         <LocationModal />

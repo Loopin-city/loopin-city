@@ -9,6 +9,7 @@ interface CommunityFieldsProps {
   fieldTouched: any;
   fieldErrors: any;
   onFieldChange: (field: string, value: any) => void;
+  isReadOnly?: boolean;
 }
 
 const CommunityFields: React.FC<CommunityFieldsProps> = ({
@@ -18,6 +19,7 @@ const CommunityFields: React.FC<CommunityFieldsProps> = ({
   fieldTouched,
   fieldErrors,
   onFieldChange,
+  isReadOnly = false,
 }) => {
   const getFieldValue = (field: string) => {
     if (isNewCommunityMode) {
@@ -51,7 +53,9 @@ const CommunityFields: React.FC<CommunityFieldsProps> = ({
   };
 
   const isFieldLocked = (field: string) => {
-    return selectedCommunity && !isNewCommunityMode;
+    // Lock fields if they have data from an existing community (not in new community mode)
+    const hasExistingData = formData.communityName && !isNewCommunityMode;
+    return isReadOnly || hasExistingData;
   };
 
   const renderField = (
@@ -83,9 +87,12 @@ const CommunityFields: React.FC<CommunityFieldsProps> = ({
           onChange={(e) => onFieldChange(field, e.target.value)}
           placeholder={placeholder}
           disabled={locked}
-          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-            locked ? 'bg-gray-100 text-gray-600 cursor-not-allowed' : 'bg-white'
-          } ${error && touched ? 'border-red-500' : 'border-gray-300'}`}
+          readOnly={locked}
+          className={`w-full px-3 py-2 border rounded-md focus:outline-none ${
+            locked 
+              ? 'bg-gray-100 text-gray-600 cursor-not-allowed border-gray-200' 
+              : 'bg-white focus:ring-2 focus:ring-blue-500 border-gray-300'
+          } ${error && touched ? 'border-red-500' : ''}`}
         />
         {error && touched && (
           <p className="text-red-500 text-sm mt-1">{error}</p>
@@ -118,10 +125,13 @@ const CommunityFields: React.FC<CommunityFieldsProps> = ({
           }}
           placeholder="Enter social media links (one per line)"
           disabled={locked}
+          readOnly={locked}
           rows={3}
-          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-            locked ? 'bg-gray-100 text-gray-600 cursor-not-allowed' : 'bg-white'
-          } ${error && touched ? 'border-red-500' : 'border-gray-300'}`}
+          className={`w-full px-3 py-2 border rounded-md focus:outline-none ${
+            locked 
+              ? 'bg-gray-100 text-gray-600 cursor-not-allowed border-gray-200' 
+              : 'bg-white focus:ring-2 focus:ring-blue-500 border-gray-300'
+          } ${error && touched ? 'border-red-500' : ''}`}
         />
         {error && touched && (
           <p className="text-red-500 text-sm mt-1">{error}</p>
@@ -157,10 +167,13 @@ const CommunityFields: React.FC<CommunityFieldsProps> = ({
           }}
           placeholder="Enter previous event names (one per line)"
           disabled={locked}
+          readOnly={locked}
           rows={3}
-          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-            locked ? 'bg-gray-100 text-gray-600 cursor-not-allowed' : 'bg-white'
-          } ${error && touched ? 'border-red-500' : 'border-gray-300'}`}
+          className={`w-full px-3 py-2 border rounded-md focus:outline-none ${
+            locked 
+              ? 'bg-gray-100 text-gray-600 cursor-not-allowed border-gray-200' 
+              : 'bg-white focus:ring-2 focus:ring-blue-500 border-gray-300'
+          } ${error && touched ? 'border-red-500' : ''}`}
         />
         {error && touched && (
           <p className="text-red-500 text-sm mt-1">{error}</p>
