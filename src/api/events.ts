@@ -1,5 +1,6 @@
 import { supabase } from '../utils/supabase';
 import { cleanupSponsorBanners } from '../utils/cleanup';
+import { updateCommunityEventCount, updateVenueEventCount } from './eventCounts';
 import type { Event, EventFormData, FilterOptions, ArchivedEvent } from '../types';
 
 export async function getEvents(filters?: FilterOptions) {
@@ -364,6 +365,26 @@ export async function archiveExpiredEvents() {
       throw deleteError;
     }
 
+    // Update event counts for affected communities and venues
+    const affectedCommunities = new Set(expiredEvents.map(e => e.community_id).filter(Boolean));
+    const affectedVenues = new Set(expiredEvents.map(e => e.venue_id).filter(Boolean));
+    
+    for (const communityId of affectedCommunities) {
+      try {
+        await updateCommunityEventCount(communityId);
+      } catch (countError) {
+        console.warn('Failed to update community event count:', countError);
+      }
+    }
+    
+    for (const venueId of affectedVenues) {
+      try {
+        await updateVenueEventCount(venueId);
+      } catch (countError) {
+        console.warn('Failed to update venue event count:', countError);
+      }
+    }
+
     console.log(`Successfully archived ${expiredEvents.length} events`);
     return { archivedCount: expiredEvents.length };
 
@@ -479,6 +500,23 @@ export async function archiveSingleEvent(eventId: string) {
     if (deleteError) {
       console.error('Error deleting archived event:', deleteError);
       throw deleteError;
+    }
+
+    // Update event counts for affected community and venue
+    if (event.community_id) {
+      try {
+        await updateCommunityEventCount(event.community_id);
+      } catch (countError) {
+        console.warn('Failed to update community event count:', countError);
+      }
+    }
+    
+    if (event.venue_id) {
+      try {
+        await updateVenueEventCount(event.venue_id);
+      } catch (countError) {
+        console.warn('Failed to update venue event count:', countError);
+      }
     }
 
     console.log(`Successfully archived event: ${event.title}`);

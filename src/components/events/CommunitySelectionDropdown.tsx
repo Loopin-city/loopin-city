@@ -22,6 +22,7 @@ const CommunitySelectionDropdown: React.FC<CommunitySelectionDropdownProps> = ({
   className = '',
   error
 }) => {
+  console.log('CommunitySelectionDropdown rendered with selectedCommunity:', selectedCommunity?.name || 'null');
   const [isOpen, setIsOpen] = useState(false);
   const [communities, setCommunities] = useState<Community[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -75,6 +76,7 @@ const CommunitySelectionDropdown: React.FC<CommunitySelectionDropdownProps> = ({
   const handleCommunitySelect = (community: Community | null) => {
     if (!cityId) return; // Don't allow community selection without a city
     
+    console.log('Dropdown handleCommunitySelect called with:', community?.name);
     onCommunitySelect(community);
     setIsOpen(false);
     setSearchTerm('');

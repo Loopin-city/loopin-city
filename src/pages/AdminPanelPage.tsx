@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getCities, addCity, updateCity, deleteCity } from '../api/cities';
 import { getAllCommunities, updateCommunity, approveCommunity, rejectCommunity, deleteCommunity, transferCommunityEvents } from '../api/communities';
 import { getVenues, createVenue, updateVenue, deleteVenue, findOrCreateVenue } from '../api/venues';
+import { updateCommunityEventCount, updateVenueEventCount, updateAllCommunityEventCounts, updateAllVenueEventCounts } from '../api/eventCounts';
 
 import { getAllEvents, updateEvent, approveEvent, rejectEvent, getArchivedEvents, archiveExpiredEvents, updateArchivedEvent, archiveSingleEvent } from '../api/events';
 import { 
@@ -362,9 +363,18 @@ const AdminPanelPage: React.FC = () => {
   const handleManualArchive = async () => {
     try {
       const result = await archiveExpiredEvents();
-      setEventSuccess(`Successfully archived ${result.archivedCount} events`);
+      // Update event counts after archiving
+      try {
+        await updateAllCommunityEventCounts();
+        await updateAllVenueEventCounts();
+      } catch (countError) {
+        console.warn('Failed to update counts after archiving:', countError);
+      }
+      setEventSuccess(`Successfully archived ${result.archivedCount} events and updated counts`);
       fetchEvents();
       fetchArchivedEvents();
+      fetchCommunities();
+      fetchVenuesList();
     } catch (error) {
       setEventError('Failed to archive events');
       console.error('Error archiving events:', error);
@@ -872,6 +882,41 @@ const AdminPanelPage: React.FC = () => {
     }
   };
 
+
+
+  const handleRefreshAllCounts = async () => {
+    let communitySuccess = false;
+    let venueSuccess = false;
+    let errors: string[] = [];
+
+    try {
+      await updateAllCommunityEventCounts();
+      communitySuccess = true;
+    } catch (error: any) {
+      errors.push(`Communities: ${error?.message || 'Unknown error'}`);
+    }
+
+    try {
+      await updateAllVenueEventCounts();
+      venueSuccess = true;
+    } catch (error: any) {
+      errors.push(`Venues: ${error?.message || 'Unknown error'}`);
+    }
+
+    // Refresh the data
+    fetchCommunities();
+    fetchVenuesList();
+
+    if (communitySuccess && venueSuccess) {
+      setCommunitySuccess('All event counts refreshed successfully');
+    } else if (communitySuccess || venueSuccess) {
+      const successMsg = communitySuccess ? 'Communities updated successfully. ' : 'Venues updated successfully. ';
+      setCommunityError(`${successMsg}Errors: ${errors.join(', ')}`);
+    } else {
+      setCommunityError(`Failed to refresh counts: ${errors.join(', ')}`);
+    }
+  };
+
   // Responsive sidebar
   const renderSidebar = () => (
     <nav className="flex flex-col gap-2 p-4 bg-gray-100 rounded-lg shadow md:min-w-[180px]">
@@ -990,7 +1035,16 @@ const AdminPanelPage: React.FC = () => {
   // Communities tab
   const renderCommunitiesTab = () => (
     <div className="w-full max-w-6xl mx-auto">
-      <h2 className="text-2xl font-bold mb-4">Communities</h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-2xl font-bold">Communities</h2>
+        <button
+          onClick={handleRefreshAllCounts}
+          className="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600"
+          title="Refresh all event counts from database"
+        >
+          🔄 Refresh All Counts
+        </button>
+      </div>
       {communityError && <div className="text-red-600 mb-2">{communityError}</div>}
       {communitySuccess && <div className="text-green-600 mb-2">{communitySuccess}</div>}
       
@@ -1291,9 +1345,9 @@ const AdminPanelPage: React.FC = () => {
                   </td>
                   <td className="px-4 py-2 text-sm">
                     <div>
-                      <div>Start: {event.date}</div>
+                      <div>Start: {event.date ? `${event.date.substring(0, 10)}  ${event.date.includes('T') ? event.date.split('T')[1].substring(0, 5) : ''}` : 'N/A'}</div>
                       {event.endDate && event.endDate !== event.date && (
-                        <div className="text-gray-600">End: {event.endDate}</div>
+                        <div className="text-gray-600">End: {`${event.endDate.substring(0, 10)}  ${event.endDate.includes('T') ? event.endDate.split('T')[1].substring(0, 5) : ''}`}</div>
                       )}
                       <div className="mt-1">
                         {(() => {
@@ -1367,7 +1421,7 @@ const AdminPanelPage: React.FC = () => {
               onClick={handleManualArchive}
               className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
             >
-              Archive Expired Events
+              Archive Expired Events & Update Counts
             </button>
           </div>
         </div>
@@ -1452,9 +1506,9 @@ const AdminPanelPage: React.FC = () => {
                   </td>
                   <td className="px-4 py-2 text-sm">
                     <div>
-                      <div>Start: {event.date}</div>
+                      <div>Start: {`${event.date.substring(0, 10)}  ${event.date.includes('T') ? event.date.split('T')[1].substring(0, 5) : ''}`}</div>
                       {event.end_date && (
-                        <div className="text-gray-600">End: {event.end_date}</div>
+                        <div className="text-gray-600">End: {`${event.end_date.substring(0, 10)}  ${event.end_date.includes('T') ? event.end_date.split('T')[1].substring(0, 5) : ''}`}</div>
                       )}
                     </div>
                   </td>

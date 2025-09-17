@@ -41,20 +41,15 @@ const EventCard: React.FC<EventCardProps> = React.memo(({ event }) => {
   const isTomorrow = new Date(Date.now() + 86400000).toDateString() === eventDate.toDateString();
   
   const getDateLabel = () => {
-    if (isToday) return 'Today';
-    if (isTomorrow) return 'Tomorrow';
-    return eventDate.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric' 
-    });
+    // Extract date part from string (YYYY-MM-DD)
+    const datePart = event.date.substring(0, 10);
+    return datePart;
   };
 
   const getTimeLabel = () => {
-    return eventDate.toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
-      minute: '2-digit',
-      hour12: true 
-    });
+    // Extract time part from string (HH:MM)
+    const timePart = event.date.includes('T') ? event.date.split('T')[1].substring(0, 5) : '';
+    return timePart;
   };
 
   return (
@@ -76,11 +71,8 @@ const EventCard: React.FC<EventCardProps> = React.memo(({ event }) => {
         
         <div className="absolute top-3 left-3 transform group-hover:scale-105 transition-transform duration-300 sm:group-hover:scale-105">
           <div className="bg-white/95 backdrop-blur-sm rounded-lg px-3 py-2 shadow-lg group-hover:shadow-xl transition-all duration-300">
-            <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-              {getDateLabel()}
-            </div>
             <div className="text-sm font-bold text-gray-900">
-              {getTimeLabel()}
+              {getDateLabel()}  {getTimeLabel()}
             </div>
           </div>
         </div>

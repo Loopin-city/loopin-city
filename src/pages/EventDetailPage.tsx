@@ -461,7 +461,7 @@ const EventDetailPage: React.FC = () => {
                             Event Date
                           </div>
                           <div className="font-bold text-blue-900 text-sm leading-tight">
-                            {event.date}
+                            {event.date.substring(0, 10)}  {event.date.includes('T') ? event.date.split('T')[1].substring(0, 5) : ''}
                           </div>
                         </div>
                       </div>
@@ -474,7 +474,7 @@ const EventDetailPage: React.FC = () => {
                         <div className="min-w-0 flex-1">
                           <div className="text-xs text-green-700 uppercase tracking-wide font-medium mb-1">End Date</div>
                           <div className="font-bold text-green-900 text-sm">
-                            {event.endDate || 'Same day'}
+                            {event.endDate ? `${event.endDate.substring(0, 10)}  ${event.endDate.includes('T') ? event.endDate.split('T')[1].substring(0, 5) : ''}` : 'Same day'}
                           </div>
                         </div>
                       </div>
